@@ -1,0 +1,44 @@
+@import './base.css';
+
+// Globale designværdier
+$color-bg: #111318;
+$color-surface: #1c1e25;
+$color-input: #202229;
+$color-border: #30323a;
+$color-text: #f4f4f5;
+$color-muted: #a1a1aa;
+$color-accent: #ffa81b;
+$color-error: #ff9292;
+
+// Globale grundregler
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: $color-bg;
+  color: $color-text;
+  font-family: Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
