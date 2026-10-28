@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { getCurrentUser } from '../services/authService'
 import { loadDecks, saveDeck } from '../services/deckService'
 import { useRoute } from 'vue-router'
@@ -23,9 +23,6 @@ async function loginAnonymously() {
 }
 
 async function saveActiveDeck() {
-  deckSaveMessage.value = ''
-  deckSaveError.value = ''
-
   try {
     if (!userId.value) {
       throw new Error('Please log in first.')
@@ -45,14 +42,18 @@ async function saveActiveDeck() {
 
     await saveDeck(userId.value, activeDeckId.value, deckData)
 
-    deckSaveMessage.value = 'Deck saved successfully!'
+    console.log('Deck saved successfully!')
   } catch (error) {
     console.error('Could not save deck:', error)
-    deckSaveError.value = error.message || 'An error occurred while saving the deck.'
   }
 }
 
+let saveTimeout = null
+let isLoadingDeck = false
+
 function selectDeck(savedDeck) {
+  isLoadingDeck = true
+
   activeDeckId.value = savedDeck.id
   deckName.value = savedDeck.name
   deckFormat.value = savedDeck.format
@@ -61,8 +62,7 @@ function selectDeck(savedDeck) {
     sideboard: savedDeck.sideboard || []
   }
 
-  deckSaveMessage.value = ''
-  deckSaveError.value = ''
+  isLoadingDeck = false
 }
 
 // Reaktiv state
@@ -77,8 +77,6 @@ const error = ref('')
 const deckFormat = ref('Standard')
 const activeDeckId = ref('')
 const deckName = ref('')
-const deckSaveMessage = ref('')
-const deckSaveError = ref('')
 
 // Hent kort fra Scryfall
 async function searchCards() {
@@ -109,15 +107,19 @@ async function searchCards() {
   }
 }
 
-function addCard(card) {
-  const existingCard = deck.value.mainboard.find(
+function addCard(card, targetBoard = 'mainboard') {
+  const board = deck.value[targetBoard]
+
+  if (!board) return
+
+  const existingCard = board.find(
     deckCard => deckCard.id === card.id
   )
 
   if (existingCard) {
     existingCard.quantity++
   } else {
-    deck.value.mainboard.push({
+    board.push({
       id: card.id,
       name: card.name,
       imageUrl: card.image_uris?.normal
@@ -133,17 +135,17 @@ function addCard(card) {
   }
 }
 
-function removeCard(cardId) {
-  deck.value.mainboard = deck.value.mainboard.filter(
+function removeCard(cardId, targetBoard = 'mainboard') {
+  deck.value[targetBoard] = deck.value[targetBoard].filter(
     card => card.id !== cardId
   )
 }
 
-function changeQuantity(card, amount) {
+function changeQuantity(card, amount, targetBoard = 'mainboard') {
   card.quantity += amount
 
   if (card.quantity <= 0) {
-    removeCard(card.id)
+    removeCard(card.id, targetBoard)
   }
 }
 
@@ -154,21 +156,87 @@ const totalCards = computed(() =>
   )
 )
 
-const formatLimits = {
-  Standard: 60,
-  Modern: 60,
-  Legacy: 60,
-  Vintage: 60,
-  Pauper: 60,
-  Timeless: 60,
-  Historic: 60,
-  Commander: 100,
-  'Duel Commander': 100,
-  'Competitive Brawl': 100
+const formatRules = {
+  Standard: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Modern: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Legacy: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Vintage: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Pauper: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Timeless: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Historic: {
+    deckLimit: 60,
+    sideboardEnabled: true,
+    sideboardLimit: 15
+  },
+  Commander: {
+    deckLimit: 100,
+    sideboardEnabled: false,
+    sideboardLimit: 0
+  },
+  'Duel Commander': {
+    deckLimit: 100,
+    sideboardEnabled: false,
+    sideboardLimit: 0
+  },
+  'Competitive Brawl': {
+    deckLimit: 100,
+    sideboardEnabled: false,
+    sideboardLimit: 0
+  }
 }
 
 const deckLimit = computed(() =>
-  formatLimits[deckFormat.value] ?? 60
+  formatRules[deckFormat.value]?.deckLimit ?? 60
+)
+
+const currentFormatRules = computed(() =>
+  formatRules[deckFormat.value] ?? formatRules.Standard
+)
+
+watch(
+  [deck, deckName, deckFormat],
+  () => {
+    // Gem ikke, mens et eksisterende deck indlæses
+    if (isLoadingDeck) return
+
+    // Nulstil den tidligere timer, hvis brugeren laver
+    // endnu en ændring inden for 800 millisekunder
+    clearTimeout(saveTimeout)
+
+    saveTimeout = setTimeout(() => {
+      if (activeDeckId.value && userId.value) {
+        saveActiveDeck()
+      }
+    }, 800)
+  },
+  {
+    deep: true,
+    flush: 'sync'
+  }
 )
 
 async function loadActiveDeck() {
@@ -194,7 +262,6 @@ async function loadActiveDeck() {
     selectDeck(matchingDeck)
   } catch (error) {
     console.error('Could not load deck:', error)
-    deckSaveError.value = error.message
   }
 }
 
@@ -248,10 +315,20 @@ onMounted(() => {
 
         <div class="card-info">
           <button
+            type="button"
             class="add-button"
-            @click="addCard(card)"
+            @click="addCard(card, 'mainboard')"
           >
-          + Add to deck
+            + Add to mainboard
+          </button>
+
+          <button
+            v-if="currentFormatRules.sideboardEnabled"
+            type="button"
+            class="add-button"
+            @click="addCard(card, 'sideboard')"
+          >
+            + Add to sideboard
           </button>
         </div>
 
@@ -260,7 +337,7 @@ onMounted(() => {
 
     <section class="deck-section">
       <header class="deck-header">
-      <h2>Your deck</h2>
+      <h2>Mainboard</h2>
       <span>{{ totalCards }}/{{ deckLimit }}</span>
     </header>
 
@@ -311,22 +388,66 @@ onMounted(() => {
       </button>
       </li>
       </ul>
-      <button
-        type="button"
-        class="save-button"
-        @click="saveActiveDeck"
-        :disabled="!activeDeckId"
+    </section>
+    
+    <section class="deck-section" v-if="currentFormatRules.sideboardEnabled">
+      <header class="deck-header">
+        <h2>Sideboard</h2>
+        <span>
+          {{ deck.sideboard.reduce((total, card) => total + card.quantity, 0) }}/{{ currentFormatRules.sideboardLimit }}
+        </span>
+      </header>
+
+      <p
+        v-if="deck.sideboard.length === 0"
+        class="empty-deck"
       >
-        Save Deck
-      </button>
-
-      <p v-if="deckSaveMessage" class="status">
-        {{ deckSaveMessage }}
+        Your sideboard is empty. Add cards to get started!
       </p>
 
-      <p v-if="deckSaveError" class="error">
-        {{ deckSaveError }}
-      </p>
+      <ul v-else class="deck-list">
+        <li
+          v-for="card in deck.sideboard"
+          :key="card.id"
+          class="deck-item"
+        >
+          <img
+            v-if="card.imageUrl"
+            :src="card.imageUrl"
+            :alt="card.name"
+          />
+
+          <span class="deck-card-name">{{ card.name }}</span>
+
+          <div class="quantity-controls">
+            <button
+              type="button"
+              :aria-label="`Remove one ${card.name} from sideboard`"
+              @click="changeQuantity(card, -1, 'sideboard')"
+            >
+              −
+            </button>
+
+            <span>{{ card.quantity }}</span>
+
+            <button
+              type="button"
+              :aria-label="`Add one ${card.name} to sideboard`"
+              @click="changeQuantity(card, 1, 'sideboard')"
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="remove-button"
+            @click="removeCard(card.id, 'sideboard')"
+          >
+            Remove
+          </button>
+        </li>
+      </ul>
     </section>
   </main>
 </template>
