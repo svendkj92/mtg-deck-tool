@@ -77,6 +77,18 @@ const error = ref('')
 const deckFormat = ref('Standard')
 const activeDeckId = ref('')
 const deckName = ref('')
+const openMenuKey = ref('')
+
+function toggleCardMenu(card, targetBoard) {
+  const menuKey = `${targetBoard}-${card.id}`
+
+  openMenuKey.value =
+    openMenuKey.value === menuKey ? '' : menuKey
+}
+
+function closeCardMenu() {
+  openMenuKey.value = ''
+}
 
 // Hent kort fra Scryfall
 async function searchCards() {
@@ -158,63 +170,78 @@ const totalCards = computed(() =>
 
 const formatRules = {
   Standard: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Modern: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Legacy: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Vintage: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Pauper: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Timeless: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Historic: {
-    deckLimit: 60,
+    mainboardMin: 60,
     sideboardEnabled: true,
     sideboardLimit: 15
   },
   Commander: {
-    deckLimit: 100,
+    mainboardMin: 100,
     sideboardEnabled: false,
     sideboardLimit: 0
   },
   'Duel Commander': {
-    deckLimit: 100,
+    mainboardMin: 100,
     sideboardEnabled: false,
     sideboardLimit: 0
   },
   'Competitive Brawl': {
-    deckLimit: 100,
+    mainboardMin: 100,
     sideboardEnabled: false,
     sideboardLimit: 0
   }
 }
 
 const deckLimit = computed(() =>
-  formatRules[deckFormat.value]?.deckLimit ?? 60
+  formatRules[deckFormat.value]?.mainboardMin ?? 60
 )
 
 const currentFormatRules = computed(() =>
   formatRules[deckFormat.value] ?? formatRules.Standard
+)
+
+const totalSideboardCards = computed(() =>
+  deck.value.sideboard.reduce(
+    (total, card) => total + card.quantity,
+    0
+  )
+)
+
+const mainboardIsValid = computed(() =>
+  totalCards.value >= currentFormatRules.value.mainboardMin
+)
+
+const sideboardIsValid = computed(() =>
+  totalSideboardCards.value <= currentFormatRules.value.sideboardLimit
 )
 
 watch(
@@ -271,7 +298,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="app">
+  <main class="app" @click="closeCardMenu">
     <header class="page-header">
       <h1>MTG Deck Tool</h1>
       <p>Search for cards for your next deck.</p>
@@ -338,7 +365,9 @@ onMounted(() => {
     <section class="deck-section">
       <header class="deck-header">
       <h2>Mainboard</h2>
-      <span>{{ totalCards }}/{{ deckLimit }}</span>
+      <span :class="{ 'count-invalid': !mainboardIsValid }">
+        {{ totalCards }}/{{ currentFormatRules.mainboardMin }}
+      </span>
     </header>
 
     <p v-if="deck.mainboard.length === 0" class="empty-deck">
@@ -351,41 +380,77 @@ onMounted(() => {
         :key="card.id"
         class="deck-item"
       >
-      <img
-        v-if="card.imageUrl"
-        :src="card.imageUrl"
-        :alt="card.name"
-      />
+        <div class="card-image-wrapper" :class="{ 'menu-open': openMenuKey === `mainboard-${card.id}` }">
+          <img
+            v-if="card.imageUrl"
+            :src="card.imageUrl"
+            :alt="card.name"
+          />
 
-      <span class="deck-card-name">{{ card.name }}</span>
+          <button
+            type="button"
+            class="card-menu-trigger"
+            aria-label="Open card actions"
+            :aria-expanded="openMenuKey === `mainboard-${card.id}`"
+            @click.stop="toggleCardMenu(card, 'mainboard')"
+          >
+            ⋮
+          </button>
 
-      <div class="quantity-controls">
-        <button
-          type="button"
-          :aria-label="`Remove one ${card.name}`"
-          @click="changeQuantity(card, -1)"
-        >
-          −
-        </button>
+          <div class="quantity-controls quantity-controls--overlay">
+            <button
+              type="button"
+              :aria-label="`Remove one ${card.name}`"
+              @click="changeQuantity(card, -1)"
+            >
+              −
+            </button>
 
-        <span>{{ card.quantity }}</span>
+            <button
+              type="button"
+              :aria-label="`Add one ${card.name}`"
+              @click="changeQuantity(card, 1)"
+            >
+              +
+            </button>
+          </div>
 
-        <button
-          type="button"
-          :aria-label="`Add one ${card.name}`"
-          @click="changeQuantity(card, 1)"
-        >
-          +
-        </button>
-      </div>
+          <div
+            v-if="openMenuKey === `mainboard-${card.id}`"
+            class="card-action-menu"
+            @click.stop
+          >
+            <div class="menu-quantity-controls">
+              <button
+                type="button"
+                :aria-label="`Remove one ${card.name}`"
+                @click="changeQuantity(card, -1, 'mainboard')"
+              >
+                −
+              </button>
 
-      <button
-        type="button"
-        class="remove-button"
-        @click="removeCard(card.id)"
-      >
-        Remove
-      </button>
+              <span>{{ card.quantity }}</span>
+
+              <button
+                type="button"
+                :aria-label="`Add one ${card.name}`"
+                @click="changeQuantity(card, 1, 'mainboard')"
+              >
+                +
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="menu-remove-button"
+              @click="removeCard(card.id, 'mainboard'); closeCardMenu()"
+            >
+              Remove card
+            </button>
+          </div>
+        </div>
+
+        <span class="card-quantity">× {{ card.quantity }}</span>
       </li>
       </ul>
     </section>
@@ -393,8 +458,8 @@ onMounted(() => {
     <section class="deck-section" v-if="currentFormatRules.sideboardEnabled">
       <header class="deck-header">
         <h2>Sideboard</h2>
-        <span>
-          {{ deck.sideboard.reduce((total, card) => total + card.quantity, 0) }}/{{ currentFormatRules.sideboardLimit }}
+        <span :class="{ 'count-invalid': !sideboardIsValid }">
+          {{ totalSideboardCards }}/{{ currentFormatRules.sideboardLimit }}
         </span>
       </header>
 
@@ -411,41 +476,80 @@ onMounted(() => {
           :key="card.id"
           class="deck-item"
         >
-          <img
-            v-if="card.imageUrl"
-            :src="card.imageUrl"
-            :alt="card.name"
-          />
-
-          <span class="deck-card-name">{{ card.name }}</span>
-
-          <div class="quantity-controls">
-            <button
-              type="button"
-              :aria-label="`Remove one ${card.name} from sideboard`"
-              @click="changeQuantity(card, -1, 'sideboard')"
-            >
-              −
-            </button>
-
-            <span>{{ card.quantity }}</span>
+          <div
+            class="card-image-wrapper"
+            :class="{ 'menu-open': openMenuKey === `sideboard-${card.id}` }"
+          >
+            <img
+              v-if="card.imageUrl"
+              :src="card.imageUrl"
+              :alt="card.name"
+            />
 
             <button
               type="button"
-              :aria-label="`Add one ${card.name} to sideboard`"
-              @click="changeQuantity(card, 1, 'sideboard')"
+              class="card-menu-trigger"
+              aria-label="Open card actions"
+              :aria-expanded="openMenuKey === `sideboard-${card.id}`"
+              @click.stop="toggleCardMenu(card, 'sideboard')"
             >
-              +
+              ⋮
             </button>
+
+            <div class="quantity-controls quantity-controls--overlay">
+              <button
+                type="button"
+                :aria-label="`Remove one ${card.name} from sideboard`"
+                @click="changeQuantity(card, -1, 'sideboard')"
+              >
+                −
+              </button>
+
+              <button
+                type="button"
+                :aria-label="`Add one ${card.name} to sideboard`"
+                @click="changeQuantity(card, 1, 'sideboard')"
+              >
+                +
+              </button>
+            </div>
+
+            <div
+              v-if="openMenuKey === `sideboard-${card.id}`"
+              class="card-action-menu"
+              @click.stop
+            >
+              <div class="menu-quantity-controls">
+                <button
+                  type="button"
+                  :aria-label="`Remove one ${card.name} from sideboard`"
+                  @click="changeQuantity(card, -1, 'sideboard')"
+                >
+                  −
+                </button>
+
+                <span>{{ card.quantity }}</span>
+
+                <button
+                  type="button"
+                  :aria-label="`Add one ${card.name} to sideboard`"
+                  @click="changeQuantity(card, 1, 'sideboard')"
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="menu-remove-button"
+                @click="removeCard(card.id, 'sideboard'); closeCardMenu()"
+              >
+                Remove card
+              </button>
+            </div>
           </div>
 
-          <button
-            type="button"
-            class="remove-button"
-            @click="removeCard(card.id, 'sideboard')"
-          >
-            Remove
-          </button>
+          <span class="card-quantity">× {{ card.quantity }}</span>
         </li>
       </ul>
     </section>
@@ -462,6 +566,9 @@ $color-text: #f4f4f5;
 $color-muted: #a1a1aa;
 $color-accent: #ffa81b;
 $color-error: #ff9292;
+.count-invalid {
+  color: $color-error !important;
+}
 
 $radius: 12px;
 $radius-small: 8px;
@@ -676,6 +783,129 @@ input {
     max-width: 220px;
     height: auto;
     border-radius: 8px;
+  }
+}
+
+.card-image-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+}
+
+.card-menu-trigger {
+  position: absolute;
+  top: 11%;
+  right: 7%;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(17, 19, 24, 0.88);
+  color: $color-text;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+
+  &:hover,
+  &:focus-visible {
+    background: $color-accent;
+    color: #171a13;
+  }
+}
+
+.quantity-controls--overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  padding: 0.3rem;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  background: rgba(17, 19, 24, 0.92);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+
+  .card-image-wrapper:hover & {
+    opacity: 1;
+    pointer-events: auto;
+  } 
+}
+
+.card-image-wrapper.menu-open .quantity-controls--overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-quantity {
+  font-variant-numeric: tabular-nums;
+}
+
+.card-action-menu {
+  position: absolute;
+  top: 46px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 150px;
+  padding: 0.6rem;
+  border: 1px solid $color-border;
+  border-radius: $radius-small;
+  background: $color-surface;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.menu-quantity-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  span {
+    font-variant-numeric: tabular-nums;
+  }
+
+  button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    background: $color-input;
+    color: $color-text;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: $color-accent;
+      color: #171a13;
+    }
+  }
+}
+
+.menu-remove-button {
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 146, 146, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 146, 146, 0.08);
+  color: $color-error;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(255, 146, 146, 0.18);
   }
 }
 
