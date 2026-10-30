@@ -97,7 +97,6 @@ onMounted(() => {
   <main class="dashboard">
     <header class="page-header">
       <h1>MTG Deck Tool</h1>
-      <p>Your decks. Your strategy. Your next brew.</p>
     </header>
 
 <section class="dashboard-section">
