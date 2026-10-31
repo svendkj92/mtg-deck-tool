@@ -80,8 +80,12 @@ const activeDeckId = ref('')
 const deckName = ref('')
 const searchMenuOpen = ref(false)
 
+
+let searchTimeout = null
 // Hent kort fra Scryfall
 async function searchCards() {
+  clearTimeout(searchTimeout)
+
   if (!searchQuery.value.trim()) return
 
   loading.value = true
@@ -115,6 +119,24 @@ watch(searchMenuOpen, (isOpen) => {
     cards.value = []
     error.value = ''
   }
+})
+
+watch(searchQuery, (newValue) => {
+  // Annuller den tidligere timer
+  clearTimeout(searchTimeout)
+
+  // Hvis søgefeltet er tomt, rydder vi op
+  if (!newValue.trim()) {
+    searchMenuOpen.value = false
+    cards.value = []
+    error.value = ''
+    return
+  }
+
+  // Start en ny timer på 800 ms
+  searchTimeout = setTimeout(() => {
+    searchCards()
+  }, 800)
 })
 
 function addCard(card, targetBoard = 'mainboard', quantity = 1) {
@@ -313,7 +335,7 @@ onMounted(() => {
       :offset="8"
     >
       <template #activator="{ props }">
-        <v-form @submit.prevent="searchCards">
+        <v-form @submit.prevent>
           <v-row align="center">
             <v-col>
               <v-text-field
@@ -323,19 +345,7 @@ onMounted(() => {
                 placeholder="e.g. Lightning Bolt"
                 prepend-inner-icon="mdi-magnify"
                 hide-details
-                @focus="searchMenuOpen = cards.length > 0"
               />
-            </v-col>
-
-            <v-col cols="auto">
-              <v-btn
-                type="submit"
-                color="primary"
-                :loading="loading"
-                :disabled="loading"
-              >
-                Search
-              </v-btn>
             </v-col>
           </v-row>
         </v-form>
@@ -711,6 +721,8 @@ $radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .search-result {
