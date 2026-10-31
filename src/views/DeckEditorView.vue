@@ -320,8 +320,8 @@ onMounted(() => {
 <template>
   <main class="app">
     <header class="page-header">
-      <h1>MTG Deck Tool</h1>
-      <p>Search for cards for your next deck.</p>
+      <h1>{{deckName}}</h1>
+      <h2>{{deckFormat}}</h2>
     </header>
 
     
