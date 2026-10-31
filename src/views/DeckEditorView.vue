@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { getCurrentUser } from '../services/authService'
 import { loadDecks, saveDeck } from '../services/deckService'
 import { useRoute } from 'vue-router'
+import ManaCost from '../components/ManaCost.vue'
 
 const route = useRoute()
 
@@ -77,23 +78,11 @@ const error = ref('')
 const deckFormat = ref('Standard')
 const activeDeckId = ref('')
 const deckName = ref('')
-const openMenuKey = ref('')
-
-function toggleCardMenu(card, targetBoard) {
-  const menuKey = `${targetBoard}-${card.id}`
-
-  openMenuKey.value =
-    openMenuKey.value === menuKey ? '' : menuKey
-}
-
-function closeCardMenu() {
-  openMenuKey.value = ''
-}
+const searchMenuOpen = ref(false)
 
 // Hent kort fra Scryfall
 async function searchCards() {
-  if (!searchQuery.value.trim()) 
-  return
+  if (!searchQuery.value.trim()) return
 
   loading.value = true
   error.value = ''
@@ -116,10 +105,19 @@ async function searchCards() {
     error.value = err.message || 'An error occurred while searching for cards.'
   } finally {
     loading.value = false
+    searchMenuOpen.value = true
   }
 }
 
-function addCard(card, targetBoard = 'mainboard') {
+watch(searchMenuOpen, (isOpen) => {
+  if (!isOpen) {
+    searchQuery.value = ''
+    cards.value = []
+    error.value = ''
+  }
+})
+
+function addCard(card, targetBoard = 'mainboard', quantity = 1) {
   const board = deck.value[targetBoard]
 
   if (!board) return
@@ -129,7 +127,7 @@ function addCard(card, targetBoard = 'mainboard') {
   )
 
   if (existingCard) {
-    existingCard.quantity++
+    existingCard.quantity += quantity
   } else {
     board.push({
       id: card.id,
@@ -137,7 +135,7 @@ function addCard(card, targetBoard = 'mainboard') {
       imageUrl: card.image_uris?.normal
         ?? card.card_faces?.[0]?.image_uris?.normal
         ?? '',
-      quantity: 1,
+      quantity: quantity,
       manaCost: card.mana_cost || '',
       manaValue: card.cmc ?? 0,
       typeLine: card.type_line || '',
@@ -298,306 +296,397 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="app" @click="closeCardMenu">
+  <main class="app">
     <header class="page-header">
       <h1>MTG Deck Tool</h1>
       <p>Search for cards for your next deck.</p>
     </header>
 
-    <form class="search-form" @submit.prevent="searchCards">
-      <input
-        v-model="searchQuery"
-        type="search"
-        placeholder="Search for a card..."
-        aria-label="Search for Magic cards"
-      />
+    
+    <v-menu
+      v-model="searchMenuOpen"
+      :disabled="!searchQuery.trim()"
+      :close-on-content-click="false"
+      location="bottom"
+      width="auto"
+      max-width="100%"
+      :offset="8"
+    >
+      <template #activator="{ props }">
+        <v-form @submit.prevent="searchCards">
+          <v-row align="center">
+            <v-col>
+              <v-text-field
+                v-bind="props"
+                v-model="searchQuery"
+                label="Search for a card"
+                placeholder="e.g. Lightning Bolt"
+                prepend-inner-icon="mdi-magnify"
+                hide-details
+                @focus="searchMenuOpen = cards.length > 0"
+              />
+            </v-col>
 
-      <button type="submit" :disabled="loading">
-        {{ loading ? 'Searching...' : 'Search' }}
-      </button>
-    </form>
+            <v-col cols="auto">
+              <v-btn
+                type="submit"
+                color="primary"
+                :loading="loading"
+                :disabled="loading"
+              >
+                Search
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-form>
+      </template>
 
-    <p v-if="error" class="error">{{ error }}</p>
-    <p v-if="loading" class="status">Fetching cards...</p>
-
-    <section v-if="cards.length" class="card-grid">
-      <article
-        v-for="card in cards"
-        :key="card.id"
-        class="card-result"
-      >
-        <img
-          v-if="card.image_uris?.normal"
-          :src="card.image_uris.normal"
-          :alt="card.name"
-          loading="lazy"
-        />
-
-        <img
-          v-else-if="card.card_faces?.[0]?.image_uris?.normal"
-          :src="card.card_faces[0].image_uris.normal"
-          :alt="card.name"
-          loading="lazy"
-        />
-
-        <div class="card-info">
-          <button
-            type="button"
-            class="add-button"
-            @click="addCard(card, 'mainboard')"
-          >
-            + Add to mainboard
-          </button>
-
-          <button
-            v-if="currentFormatRules.sideboardEnabled"
-            type="button"
-            class="add-button"
-            @click="addCard(card, 'sideboard')"
-          >
-            + Add to sideboard
-          </button>
-        </div>
-
-      </article>
-    </section>
-
-    <section class="deck-section">
-      <header class="deck-header">
-      <h2>Mainboard</h2>
-      <span :class="{ 'count-invalid': !mainboardIsValid }">
-        {{ totalCards }}/{{ currentFormatRules.mainboardMin }}
-      </span>
-    </header>
-
-    <p v-if="deck.mainboard.length === 0" class="empty-deck">
-    Your deck is empty. Search for cards and add them!
-    </p>
-
-    <ul v-else class="deck-list">
-      <li
-        v-for="card in deck.mainboard"
-        :key="card.id"
-        class="deck-item"
-      >
-        <div class="card-image-wrapper" :class="{ 'menu-open': openMenuKey === `mainboard-${card.id}` }">
-          <img
-            v-if="card.imageUrl"
-            :src="card.imageUrl"
-            :alt="card.name"
+      <v-card class="search-results" variant="outlined">
+        <v-card-text>
+          <v-progress-linear
+            v-if="loading"
+            indeterminate
+            color="primary"
+            class="mb-4"
           />
 
-          <button
-            type="button"
-            class="card-menu-trigger"
-            aria-label="Open card actions"
-            :aria-expanded="openMenuKey === `mainboard-${card.id}`"
-            @click.stop="toggleCardMenu(card, 'mainboard')"
-          >
-            ⋮
-          </button>
-
-          <div class="quantity-controls quantity-controls--overlay">
-            <button
-              type="button"
-              :aria-label="`Remove one ${card.name}`"
-              @click="changeQuantity(card, -1)"
+          <template v-if="cards.length">
+            <v-card
+              v-for="card in cards"
+              :key="card.id"
+              class="search-result"
+              variant="outlined"
             >
-              −
-            </button>
+              <v-card-text>
+                <v-row align="center">
+                  <!-- Kortinformation -->
+                  <v-col>
+                    <div class="text-subtitle-1 font-weight-bold">
+                      {{ card.name }}
+                    </div>
 
-            <button
-              type="button"
-              :aria-label="`Add one ${card.name}`"
-              @click="changeQuantity(card, 1)"
-            >
-              +
-            </button>
+                    <div class="text-body-2 text-medium-emphasis">
+                      {{ card.type_line }}
+                    </div>
+
+                    <div class="text-caption text-medium-emphasis">
+                      <ManaCost :cost="card.mana_cost" />
+                    </div>
+                  </v-col>
+
+                  <!-- Mainboard-knapper -->
+                  <v-col cols="auto">
+                    <div class="text-caption text-medium-emphasis mb-1">
+                      Mainboard
+                    </div>
+
+                    <v-btn-group density="comfortable">
+                      <v-btn
+                        size="small"
+                        color="primary"
+                        @click="addCard(card, 'mainboard', 1)"
+                      >
+                        +1
+                      </v-btn>
+
+                      <v-btn
+                        size="small"
+                        color="primary"
+                        @click="addCard(card, 'mainboard', 4)"
+                      >
+                        +4
+                      </v-btn>
+                    </v-btn-group>
+                  </v-col>
+
+                  <!-- Sideboard-knapper -->
+                  <v-col
+                    v-if="currentFormatRules.sideboardEnabled"
+                    cols="auto"
+                  >
+                    <div class="text-caption text-medium-emphasis mb-1">
+                      Sideboard
+                    </div>
+
+                    <v-btn-group density="comfortable">
+                      <v-btn
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        @click="addCard(card, 'sideboard', 1)"
+                      >
+                        +1
+                      </v-btn>
+
+                      <v-btn
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        @click="addCard(card, 'sideboard', 4)"
+                      >
+                        +4
+                      </v-btn>
+                    </v-btn-group>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </template>
+
+          <div v-else-if="loading" class="text-medium-emphasis">
+            Searching...
           </div>
 
-          <div
-            v-if="openMenuKey === `mainboard-${card.id}`"
-            class="card-action-menu"
-            @click.stop
-          >
-            <div class="menu-quantity-controls">
-              <button
-                type="button"
-                :aria-label="`Remove one ${card.name}`"
-                @click="changeQuantity(card, -1, 'mainboard')"
-              >
-                −
-              </button>
-
-              <span>{{ card.quantity }}</span>
-
-              <button
-                type="button"
-                :aria-label="`Add one ${card.name}`"
-                @click="changeQuantity(card, 1, 'mainboard')"
-              >
-                +
-              </button>
-            </div>
-
-            <button
-              type="button"
-              class="menu-remove-button"
-              @click="removeCard(card.id, 'mainboard'); closeCardMenu()"
-            >
-              Remove card
-            </button>
+          <div v-else-if="searchQuery.trim()" class="text-medium-emphasis">
+            No cards found.
           </div>
-        </div>
+        </v-card-text>
+      </v-card>
+    </v-menu>
 
-        <span class="card-quantity">× {{ card.quantity }}</span>
-      </li>
-      </ul>
-    </section>
-    
-    <section class="deck-section" v-if="currentFormatRules.sideboardEnabled">
-      <header class="deck-header">
-        <h2>Sideboard</h2>
-        <span :class="{ 'count-invalid': !sideboardIsValid }">
-          {{ totalSideboardCards }}/{{ currentFormatRules.sideboardLimit }}
-        </span>
-      </header>
 
-      <p
-        v-if="deck.sideboard.length === 0"
-        class="empty-deck"
-      >
-        Your sideboard is empty. Add cards to get started!
-      </p>
+    <v-card class="deck-section" variant="flat">
+      <v-card-title class="deck-header">
+        <h2>Mainboard</h2>
 
-      <ul v-else class="deck-list">
-        <li
-          v-for="card in deck.sideboard"
-          :key="card.id"
-          class="deck-item"
+        <v-chip
+          :color="mainboardIsValid ? 'primary' : 'error'"
+          size="small"
+          variant="tonal"
         >
+          {{ totalCards }}/{{ currentFormatRules.mainboardMin }}
+        </v-chip>
+      </v-card-title>
+
+      <v-card-text>
+        <p v-if="deck.mainboard.length === 0" class="empty-deck">
+          Your deck is empty. Search for cards and add them!
+        </p>
+
+        <div v-else class="deck-grid">
           <div
-            class="card-image-wrapper"
-            :class="{ 'menu-open': openMenuKey === `sideboard-${card.id}` }"
+            v-for="card in deck.mainboard"
+            :key="card.id"
+            class="deck-item"
           >
-            <img
-              v-if="card.imageUrl"
-              :src="card.imageUrl"
-              :alt="card.name"
-            />
+            <div class="deck-card-image">
+              <img
+                v-if="card.imageUrl"
+                :src="card.imageUrl"
+                :alt="card.name"
+              />
 
-            <button
-              type="button"
-              class="card-menu-trigger"
-              aria-label="Open card actions"
-              :aria-expanded="openMenuKey === `sideboard-${card.id}`"
-              @click.stop="toggleCardMenu(card, 'sideboard')"
-            >
-              ⋮
-            </button>
-
-            <div class="quantity-controls quantity-controls--overlay">
-              <button
-                type="button"
-                :aria-label="`Remove one ${card.name} from sideboard`"
-                @click="changeQuantity(card, -1, 'sideboard')"
-              >
-                −
-              </button>
-
-              <button
-                type="button"
-                :aria-label="`Add one ${card.name} to sideboard`"
-                @click="changeQuantity(card, 1, 'sideboard')"
-              >
-                +
-              </button>
-            </div>
-
-            <div
-              v-if="openMenuKey === `sideboard-${card.id}`"
-              class="card-action-menu"
-              @click.stop
-            >
-              <div class="menu-quantity-controls">
-                <button
-                  type="button"
-                  :aria-label="`Remove one ${card.name} from sideboard`"
-                  @click="changeQuantity(card, -1, 'sideboard')"
+              <!-- Antal og quantity controls -->
+              <div class="card-quantity-overlay">
+                <v-chip
+                  class="card-quantity-badge"
+                  color="surface"
+                  size="small"
+                  variant="flat"
                 >
-                  −
-                </button>
+                  x{{ card.quantity }}
+                </v-chip>
 
-                <span>{{ card.quantity }}</span>
-
-                <button
-                  type="button"
-                  :aria-label="`Add one ${card.name} to sideboard`"
-                  @click="changeQuantity(card, 1, 'sideboard')"
-                >
-                  +
-                </button>
+                <div class="quantity-controls--overlay">
+                  <v-btn
+                    class="quantity-button"
+                    icon="mdi-plus"
+                    size="small"
+                    density="compact"
+                    variant="flat"
+                    aria-label="Add one copy"
+                    @click.stop="changeQuantity(card, 1, 'mainboard')"
+                  />
+                  <v-btn
+                    class="quantity-button"
+                    icon="mdi-minus"
+                    size="small"
+                    density="compact"
+                    variant="flat"
+                    aria-label="Remove one copy"
+                    @click.stop="changeQuantity(card, -1, 'mainboard')"
+                  />
+                </div>
               </div>
 
-              <button
-                type="button"
-                class="menu-remove-button"
-                @click="removeCard(card.id, 'sideboard'); closeCardMenu()"
-              >
-                Remove card
-              </button>
+              <!-- Ellipsemenu -->
+              <v-menu location="bottom end">
+                <template #activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    class="card-menu-trigger"
+                    icon="mdi-dots-vertical"
+                    size="small"
+                    density="compact"
+                    variant="flat"
+                    aria-label="Open card actions"
+                    @click.stop
+                  />
+                </template>
+
+                <v-list density="compact">
+                  <v-list-item
+                    title="Remove card"
+                    prepend-icon="mdi-delete-outline"
+                    @click="removeCard(card.id, 'mainboard')"
+                  />
+                </v-list>
+              </v-menu>
             </div>
           </div>
+        </div>
+      </v-card-text>
+    </v-card>
+    
+    <v-card
+      v-if="currentFormatRules.sideboardEnabled"
+      class="deck-section"
+      variant="flat"
+    >
+      <v-card-title class="deck-header">
+        <h2>Sideboard</h2>
 
-          <span class="card-quantity">× {{ card.quantity }}</span>
-        </li>
-      </ul>
-    </section>
+        <v-chip
+          :color="sideboardIsValid ? 'primary' : 'error'"
+          size="small"
+          variant="tonal"
+        >
+          {{ totalSideboardCards }}/{{ currentFormatRules.sideboardLimit }}
+        </v-chip>
+      </v-card-title>
+
+      <v-card-text>
+        <p v-if="deck.sideboard.length === 0" class="empty-deck">
+          Your sideboard is empty. Add cards to get started!
+        </p>
+
+        <div v-else class="deck-grid">
+          <div
+            v-for="card in deck.sideboard"
+            :key="card.id"
+            class="deck-card"
+          >
+            <div class="deck-card-image">
+              <img
+                v-if="card.imageUrl"
+                :src="card.imageUrl"
+                :alt="card.name"
+              />
+
+              <!-- Antal og quantity controls -->
+              <div class="card-quantity-overlay">
+                <v-chip
+                  class="card-quantity-badge"
+                  color="surface"
+                  size="small"
+                  variant="flat"
+                >
+                  x{{ card.quantity }}
+                </v-chip>
+
+                <div class="quantity-controls--overlay">
+                  <v-btn
+                    class="quantity-button"
+                    icon="mdi-plus"
+                    size="small"
+                    density="compact"
+                    variant="flat"
+                    :aria-label="`Add one ${card.name} to sideboard`"
+                    @click.stop="changeQuantity(card, 1, 'sideboard')"
+                  />
+                  <v-btn
+                    class="quantity-button"
+                    icon="mdi-minus"
+                    size="small"
+                    density="compact"
+                    variant="flat"
+                    :aria-label="`Remove one ${card.name} from sideboard`"
+                    @click.stop="changeQuantity(card, -1, 'sideboard')"
+                  />
+                </div>
+              </div>
+
+              <!-- Ellipsemenu -->
+              <v-menu location="bottom end">
+                <template #activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    class="card-menu-trigger"
+                    icon="mdi-dots-vertical"
+                    size="small"
+                    density="compact"
+                    variant="flat"
+                    aria-label="Open card actions"
+                    @click.stop
+                  />
+                </template>
+
+                <v-list density="compact">
+                  <v-list-item
+                    title="Remove card"
+                    prepend-icon="mdi-delete-outline"
+                    @click="removeCard(card.id, 'sideboard')"
+                  />
+                </v-list>
+              </v-menu>
+            </div>
+          </div>
+        </div>
+      </v-card-text>
+    </v-card>
   </main>
 </template>
 
 <style lang="scss" scoped>
+
+// ==========================================
 // 1. Variabler
-$color-bg: #111318;
+// Samler farver og værdier, der bruges flere steder.
+// Gør det nemmere at ændre designets grundelementer.
+// ==========================================
+
 $color-surface: #1c1e25;
-$color-input: #202229;
-$color-border: #30323a;
-$color-text: #f4f4f5;
 $color-muted: #a1a1aa;
-$color-accent: #ffa81b;
+$color-border: #30323a;
 $color-error: #ff9292;
-.count-invalid {
-  color: $color-error !important;
-}
 
 $radius: 12px;
-$radius-small: 8px;
 
+
+// ==========================================
 // 2. Globale styles
+// Sørger for ensartet beregning af elementers størrelse
+// og fjerner browserens standardmargin på body.
+// ==========================================
+
 :global(*) {
   box-sizing: border-box;
 }
 
 :global(body) {
   margin: 0;
-  background: $color-bg;
-  color: $color-text;
   font-family: Arial, sans-serif;
 }
 
-button,
-input {
-  font: inherit;
-}
 
-// 3. Appens layout
+// ==========================================
+// 3. Appens overordnede layout
+// Begrænser indholdets maksimale bredde og centrerer
+// det på siden. Tilføjer luft omkring indholdet.
+// ==========================================
+
 .app {
   width: min(1400px, 94%);
   margin: 0 auto;
   padding: 3rem 0;
 }
 
-// 4. Header
+
+// ==========================================
+// 4. Sidens header
+// Styler sidens overskrift og tilhørende beskrivende tekst.
+// ==========================================
+
 .page-header {
   margin-bottom: 2rem;
 
@@ -611,114 +700,33 @@ input {
   }
 }
 
-// 5. Søgeformular
-.search-form {
+
+// ==========================================
+// 5. Søgeresultater
+// Arrangerer søgeresultaterne lodret med afstand imellem.
+// Tilpasser Vuetify-kortenes kant og baggrund.
+// ==========================================
+
+.search-results {
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 2rem;
-
-  input {
-    flex: 1;
-    min-width: 0;
-    padding: 0.9rem 1rem;
-    border: 1px solid #3f414a;
-    border-radius: $radius-small;
-    background: $color-input;
-    color: $color-text;
-
-    &:focus {
-      outline: 2px solid $color-accent;
-      outline-offset: 2px;
-    }
-  }
-
-  button {
-    padding: 0.9rem 1.4rem;
-    border: 0;
-    border-radius: $radius-small;
-    background: $color-accent;
-    color: #171a13;
-    font-weight: bold;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
-
-    &:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: wait;
-    }
-  }
 }
 
-// Valg af deck-format
-.format-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  margin-top: 1.5rem;
-
-  label {
-    color: $color-muted;
-    font-size: 0.9rem;
-    font-weight: 600;
-  }
-
-  select {
-    min-width: 180px;
-    padding: 0.75rem 2.5rem 0.75rem 1rem;
-    border: 1px solid $color-border;
-    border-radius: $radius-small;
-    background: $color-input;
-    color: $color-text;
-    font: inherit;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      border-color: $color-accent;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: $color-accent;
-      box-shadow: 0 0 0 2px rgba(185, 242, 124, 0.2);
-    }
-
-    option {
-      background: $color-input;
-      color: $color-text;
-    }
-  }
+.search-result {
+  border-color: $color-border;
+  background: $color-surface;
 }
 
-.add-button {
-  width: 100%;
-  padding: 0.7rem;
-  border: 0;
-  border-radius: $radius-small;
-  background: $color-accent;
-  color: #171a13;
-  font-weight: bold;
-  cursor: pointer;
 
-  &:hover {
-    opacity: 0.85;
-  }
-}
+// ==========================================
+// 6. Mainboard og sideboard
+// Styler de overordnede sektioner, deres overskrifter
+// samt teksten, der vises, når et deck er tomt.
+// ==========================================
 
 .deck-section {
   margin-top: 3rem;
-  padding: 2rem;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  background: $color-surface;
 }
 
 .deck-header {
@@ -734,359 +742,141 @@ input {
     margin: 0;
     font-size: 1.5rem;
   }
-
-  span {
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    background: $color-input;
-    color: $color-accent;
-    font-size: 0.85rem;
-    font-weight: bold;
-    white-space: nowrap;
-  }
 }
 
+// Markerer ugyldige kortantal med en fejlfarve.
+.count-invalid {
+  color: $color-error !important;
+}
+
+// Centrerer beskeden, når et deck ikke indeholder kort.
 .empty-deck {
   padding: 2rem 1rem;
   color: $color-muted;
   text-align: center;
 }
 
-.deck-list {
+
+// ==========================================
+// 7. Kort-grid
+// Arrangerer kortene i et responsivt grid.
+// Hvert kort får sin egen plads i grid'et.
+// ==========================================
+
+.deck-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 180px));
   gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.deck-item {
+.deck-card {
+  min-width: 0;
+}
+
+
+// ==========================================
+// 8. Kortbilleder
+// Sørger for korrekt visning af kortbillederne
+// og skaber en positioneringsramme for overlays.
+// ==========================================
+
+.deck-card-image {
+  position: relative;
+  width: 100%;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+}
+
+
+// ==========================================
+// 9. Antal-chip og quantity controls
+// Placering af kortets antal og plus/minus-knapper
+// oven på kortbilledet.
+// ==========================================
+
+.card-quantity-overlay {
+  position: absolute;
+  top: 12%;
+  left: 8.5%;
+  z-index: 2;
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 1px solid $color-border;
-  border-radius: $radius-small;
-  background: $color-input;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-
-  &:hover {
-    border-color: $color-accent;
-    background: #272a33;
-  }
-
-  img {
-    display: block;
-    width: 100%;
-    max-width: 220px;
-    height: auto;
-    border-radius: 8px;
-  }
+  gap: 5px;
 }
 
-.card-image-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 220px;
-
-  img {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
-  }
-}
-
-.card-menu-trigger {
-  position: absolute;
-  top: 11%;
-  right: 7%;
-  display: grid;
-  place-items: center;
+// Tilpasser Vuetify-chippen, der viser antal kopier.
+.card-quantity-badge {
   width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
-  background: rgba(17, 19, 24, 0.88);
-  color: $color-text;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 2;
-
-  &:hover,
-  &:focus-visible {
-    background: $color-accent;
-    color: #171a13;
-  }
+  min-width: 32px;
+  justify-content: center;
+  font-weight: 700;
+  border-radius: 8px !important;
 }
 
+// Arrangerer plus/minus-knapperne lodret.
+// Knapperne er skjult som standard.
 .quantity-controls--overlay {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
-  padding: 0.3rem;
-  border: 1px solid $color-border;
-  border-radius: 8px;
-  background: rgba(17, 19, 24, 0.92);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
-
-  .card-image-wrapper:hover & {
-    opacity: 1;
-    pointer-events: auto;
-  } 
 }
 
-.card-image-wrapper.menu-open .quantity-controls--overlay {
-  opacity: 0;
-  pointer-events: none;
+// Viser knapperne, når brugeren holder musen over kortet
+// eller navigerer til dem med tastaturet.
+.deck-card-image:hover .quantity-controls--overlay,
+.deck-card-image:focus-within .quantity-controls--overlay {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.card-quantity {
-  font-variant-numeric: tabular-nums;
+// Fælles udseende og størrelse på plus/minus-knapperne.
+.quantity-button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 8px !important;
+
+  background: rgba(17, 19, 24, 0.92);
+  color: white;
 }
 
-.card-action-menu {
-  position: absolute;
-  top: 46px;
-  right: 8px;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 150px;
-  padding: 0.6rem;
-  border: 1px solid $color-border;
-  border-radius: $radius-small;
-  background: $color-surface;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+// ==========================================
+// 10. Ellipsemenu
+// Positionerer menu-knappen øverst til højre på kortet.
+// ==========================================
+
+.card-menu-trigger {
+  position: absolute !important;
+  top: 12%;
+  right: 8%;
+  z-index: 2;
+
+  width: 22px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+
+  background: rgba(17, 19, 24, 0.92);
+  color: white;
 }
 
-.menu-quantity-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
 
-  span {
-    font-variant-numeric: tabular-nums;
-  }
+// ==========================================
+// 11. Responsivt design
+// Tilpasser grid, afstande og knapper til mindre skærme.
+// ==========================================
 
-  button {
-    width: 32px;
-    height: 32px;
-    border: 1px solid $color-border;
-    border-radius: 6px;
-    background: $color-input;
-    color: $color-text;
-    cursor: pointer;
-
-    &:hover,
-    &:focus-visible {
-      background: $color-accent;
-      color: #171a13;
-    }
-  }
-}
-
-.menu-remove-button {
-  padding: 0.5rem;
-  border: 1px solid rgba(255, 146, 146, 0.3);
-  border-radius: 6px;
-  background: rgba(255, 146, 146, 0.08);
-  color: $color-error;
-  cursor: pointer;
-
-  &:hover,
-  &:focus-visible {
-    background: rgba(255, 146, 146, 0.18);
-  }
-}
-
-.deck-card-name {
-  display: none;
-}
-
-.quantity-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-
-  span {
-    min-width: 1.5rem;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
-  }
-
-  button {
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: 1px solid $color-border;
-    border-radius: 6px;
-    background: $color-surface;
-    color: $color-text;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition:
-      background-color 0.2s ease,
-      color 0.2s ease;
-
-    &:hover {
-      background: $color-accent;
-      color: #171a13;
-    }
-  }
-}
-
-.remove-button {
-  padding: 0.55rem 0.8rem;
-  border: 1px solid rgba(255, 146, 146, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 146, 146, 0.08);
-  color: $color-error;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-
-  &:hover {
-    border-color: $color-error;
-    background: rgba(255, 146, 146, 0.18);
-  }
-
-  &:active {
-    background: rgba(255, 146, 146, 0.28);
-  }
-}
-
-// 6. Feedback til brugeren
-.error {
-  color: $color-error;
-}
-
-.status {
-  color: $color-accent;
-}
-
-// 7. Kortoversigt
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1.25rem;
-}
-
-.card-result {
-  overflow: hidden;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  background: $color-surface;
-  transition: transform 0.2s ease, border-color 0.2s ease;
-
-  &:hover {
-    transform: translateY(-3px);
-    border-color: $color-accent;
-  }
-
-  img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-}
-
-.deck-manager {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  background: $color-surface;
-
-  h2,
-  h3 {
-    margin-top: 0;
-  }
-
-  form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  input {
-    flex: 1;
-    min-width: 180px;
-    padding: 0.75rem;
-    border: 1px solid $color-border;
-    border-radius: $radius-small;
-    background: $color-input;
-    color: $color-text;
-  }
-
-  button {
-    padding: 0.75rem 1rem;
-    border: 0;
-    border-radius: $radius-small;
-    background: $color-accent;
-    color: #171a13;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  ul {
-    padding-left: 1.25rem;
-  }
-
-  li {
-    margin-bottom: 0.5rem;
-  }
-}
-
-.save-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-  padding: 0.9rem 1.5rem;
-  border: 0;
-  border-radius: $radius-small;
-  background: $color-accent;
-  color: #171a13;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(0px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: wait;
-    transform: none;
-  }
-}
-
-// 8. Responsivt design
 @media (max-width: 480px) {
   .app {
     padding: 2rem 0;
@@ -1096,67 +886,40 @@ input {
     font-size: 2rem;
   }
 
-  .search-form {
-    flex-direction: column;
-
-    button {
-      width: 100%;
-    }
-  }
-    .deck-section {
+  .deck-section {
     padding: 1rem;
   }
 
-  .format-selector {
-  align-items: stretch;
-  flex-direction: column;
-  gap: 0.5rem;
+  // Viser to kort pr. række på små skærme.
+  .deck-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
 
-  select {
-    width: 100%;
-    min-width: 0;
+  // Gør antal-chip og knapper lidt mindre.
+  .card-quantity-badge {
+    width: 28px;
+    min-width: 28px;
+  }
+
+  .quantity-button {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
   }
 }
 
-  .deck-item {
-    .deck-list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.6rem;
-    }
 
-    .deck-item {
-      padding: 0.4rem;
+// Touch-enheder:
+// Viser altid plus/minus-knapperne, da hover ikke
+// fungerer på samme måde som på en computer.
 
-      img {
-        width: 100%;
-      }
-    }
-
-    .quantity-controls {
-      gap: 0.25rem;
-
-      button {
-        width: 26px;
-        height: 26px;
-      }
-    }
-
-    .remove-button {
-      width: 100%;
-    }
-  }
-
-  .quantity-controls {
-    gap: 0.35rem;
-  }
-
-  .quantity-controls {
-  gap: 0.25rem;
-
-  button {
-    width: 26px;
-    height: 26px;
+@media (hover: none) {
+  .quantity-controls--overlay {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
-}
+
 </style>
+
