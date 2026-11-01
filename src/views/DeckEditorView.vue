@@ -104,7 +104,20 @@ async function searchCards() {
     }
 
     const data = await response.json()
-    cards.value = data.data
+    cards.value = data.data.map(card => {
+      // Multifaced cards kan have mana cost på de enkelte faces
+      if (card.card_faces && !card.mana_cost) {
+        return {
+          ...card,
+          mana_cost: card.card_faces
+            .map(face => face.mana_cost)
+            .filter(Boolean)
+            .join(' // ')
+        }
+      }
+
+      return card
+    })
   } catch (err) {
     error.value = err.message || 'An error occurred while searching for cards.'
   } finally {
@@ -154,9 +167,18 @@ function addCard(card, targetBoard = 'mainboard', quantity = 1) {
     board.push({
       id: card.id,
       name: card.name,
+
+      // Store images for both sides of multiface cards
+      cardFaces: card.card_faces?.map(face => ({
+        name: face.name,
+        imageUrl: face.image_uris?.normal || ''
+      })) || [],
+
+      // Front image (default)
       imageUrl: card.image_uris?.normal
         ?? card.card_faces?.[0]?.image_uris?.normal
         ?? '',
+
       quantity: quantity,
       manaCost: card.mana_cost || '',
       manaValue: card.cmc ?? 0,
@@ -165,6 +187,36 @@ function addCard(card, targetBoard = 'mainboard', quantity = 1) {
       colorIdentity: card.color_identity || []
     })
   }
+}
+
+
+
+const flippedCards = ref(new Set())
+const animatingCards = ref(new Set())
+
+function toggleCardFace(card) {
+  // Start animationen
+  const animating = new Set(animatingCards.value)
+  animating.add(card.id)
+  animatingCards.value = animating
+
+  // Vend kortet
+  const updatedCards = new Set(flippedCards.value)
+
+  if (updatedCards.has(card.id)) {
+    updatedCards.delete(card.id)
+  } else {
+    updatedCards.add(card.id)
+  }
+
+  flippedCards.value = updatedCards
+}
+
+// Kaldes, når CSS-transitionen er færdig
+function finishCardFlip(cardId) {
+  const animating = new Set(animatingCards.value)
+  animating.delete(cardId)
+  animatingCards.value = animating
 }
 
 function removeCard(cardId, targetBoard = 'mainboard') {
@@ -479,70 +531,103 @@ onMounted(() => {
             :key="card.id"
             class="deck-item"
           >
-            <div class="deck-card-image">
-              <img
-                v-if="card.imageUrl"
-                :src="card.imageUrl"
-                :alt="card.name"
-              />
+          <div class="deck-card-image">
+            <!-- Kortets 3D-flip -->
+            <div
+              class="flip-card"
+              @transitionend="finishCardFlip(card.id)"
+              :class="{ 'is-flipped': flippedCards.has(card.id) }"
+            >
+              <div class="flip-card-inner">
+                <div class="flip-card-face flip-card-front">
+                  <img :src="card.imageUrl" :alt="card.name" />
+                </div>
 
-              <!-- Antal og quantity controls -->
-              <div class="card-quantity-overlay">
-                <v-chip
-                  class="card-quantity-badge"
-                  color="surface"
-                  size="small"
-                  variant="flat"
-                >
-                  x{{ card.quantity }}
-                </v-chip>
-
-                <div class="quantity-controls--overlay">
-                  <v-btn
-                    class="quantity-button"
-                    icon="mdi-plus"
-                    size="small"
-                    density="compact"
-                    variant="flat"
-                    aria-label="Add one copy"
-                    @click.stop="changeQuantity(card, 1, 'mainboard')"
-                  />
-                  <v-btn
-                    class="quantity-button"
-                    icon="mdi-minus"
-                    size="small"
-                    density="compact"
-                    variant="flat"
-                    aria-label="Remove one copy"
-                    @click.stop="changeQuantity(card, -1, 'mainboard')"
+                <div class="flip-card-face flip-card-back">
+                  <img
+                    :src="card.cardFaces?.[1]?.imageUrl || card.imageUrl"
+                    :alt="card.cardFaces?.[1]?.name || card.name"
                   />
                 </div>
               </div>
-
-              <!-- Ellipsemenu -->
-              <v-menu location="bottom end">
-                <template #activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    class="card-menu-trigger"
-                    icon="mdi-dots-vertical"
-                    size="small"
-                    density="compact"
-                    variant="flat"
-                    aria-label="Open card actions"
-                    @click.stop
-                  />
-                </template>
-
-                <v-list density="compact">
-                  <v-list-item
-                    title="Remove card"
-                    prepend-icon="mdi-delete-outline"
-                    @click="removeCard(card.id, 'mainboard')"
-                  />
-                </v-list>
-              </v-menu>
             </div>
+
+            <!-- Controls animeres væk under flip -->
+            <Transition name="card-controls">
+              <div
+                v-if="!animatingCards.has(card.id)"
+                class="card-controls"
+              >
+                <div class="card-quantity-overlay">
+                  <v-chip
+                    class="card-quantity-badge"
+                    color="surface"
+                    size="small"
+                    variant="flat"
+                  >
+                    x{{ card.quantity }}
+                  </v-chip>
+
+                  <div class="quantity-controls--overlay">
+                    <v-btn
+                      class="quantity-button"
+                      icon="mdi-plus"
+                      size="small"
+                      density="compact"
+                      variant="flat"
+                      aria-label="Add one copy"
+                      @click.stop="changeQuantity(card, 1, 'mainboard')"
+                    />
+
+                    <v-btn
+                      class="quantity-button"
+                      icon="mdi-minus"
+                      size="small"
+                      density="compact"
+                      variant="flat"
+                      aria-label="Remove one copy"
+                      @click.stop="changeQuantity(card, -1, 'mainboard')"
+                    />
+                  </div>
+                </div>
+
+                <v-menu location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      class="card-menu-trigger"
+                      icon="mdi-dots-vertical"
+                      size="small"
+                      density="compact"
+                      variant="flat"
+                      aria-label="Open card actions"
+                      @click.stop
+                    />
+                  </template>
+
+                  <v-list density="compact">
+                    <v-list-item
+                      title="Remove card"
+                      prepend-icon="mdi-delete-outline"
+                      @click="removeCard(card.id, 'mainboard')"
+                    />
+                  </v-list>
+                </v-menu>
+              </div>
+            </Transition>
+
+            <!-- Flip-knappen forbliver synlig -->
+            <v-btn
+              v-if="card.cardFaces?.length > 1"
+              class="card-flip-trigger"
+              icon="mdi-sync"
+              size="small"
+              density="compact"
+              variant="flat"
+              aria-label="Flip card"
+              @click.stop="toggleCardFace(card); $event.currentTarget.blur()"
+            />
+          </div>
           </div>
         </div>
       </v-card-text>
@@ -577,69 +662,102 @@ onMounted(() => {
             class="deck-card"
           >
             <div class="deck-card-image">
-              <img
-                v-if="card.imageUrl"
-                :src="card.imageUrl"
-                :alt="card.name"
-              />
+            <!-- Kortets 3D-flip -->
+            <div
+              class="flip-card"
+              @transitionend="finishCardFlip(card.id)"
+              :class="{ 'is-flipped': flippedCards.has(card.id) }"
+            >
+              <div class="flip-card-inner">
+                <div class="flip-card-face flip-card-front">
+                  <img :src="card.imageUrl" :alt="card.name" />
+                </div>
 
-              <!-- Antal og quantity controls -->
-              <div class="card-quantity-overlay">
-                <v-chip
-                  class="card-quantity-badge"
-                  color="surface"
-                  size="small"
-                  variant="flat"
-                >
-                  x{{ card.quantity }}
-                </v-chip>
-
-                <div class="quantity-controls--overlay">
-                  <v-btn
-                    class="quantity-button"
-                    icon="mdi-plus"
-                    size="small"
-                    density="compact"
-                    variant="flat"
-                    :aria-label="`Add one ${card.name} to sideboard`"
-                    @click.stop="changeQuantity(card, 1, 'sideboard')"
-                  />
-                  <v-btn
-                    class="quantity-button"
-                    icon="mdi-minus"
-                    size="small"
-                    density="compact"
-                    variant="flat"
-                    :aria-label="`Remove one ${card.name} from sideboard`"
-                    @click.stop="changeQuantity(card, -1, 'sideboard')"
+                <div class="flip-card-face flip-card-back">
+                  <img
+                    :src="card.cardFaces?.[1]?.imageUrl || card.imageUrl"
+                    :alt="card.cardFaces?.[1]?.name || card.name"
                   />
                 </div>
               </div>
-
-              <!-- Ellipsemenu -->
-              <v-menu location="bottom end">
-                <template #activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    class="card-menu-trigger"
-                    icon="mdi-dots-vertical"
-                    size="small"
-                    density="compact"
-                    variant="flat"
-                    aria-label="Open card actions"
-                    @click.stop
-                  />
-                </template>
-
-                <v-list density="compact">
-                  <v-list-item
-                    title="Remove card"
-                    prepend-icon="mdi-delete-outline"
-                    @click="removeCard(card.id, 'sideboard')"
-                  />
-                </v-list>
-              </v-menu>
             </div>
+
+            <!-- Controls animeres væk under flip -->
+            <Transition name="card-controls">
+              <div
+                v-if="!animatingCards.has(card.id)"
+                class="card-controls"
+              >
+                <div class="card-quantity-overlay">
+                  <v-chip
+                    class="card-quantity-badge"
+                    color="surface"
+                    size="small"
+                    variant="flat"
+                  >
+                    x{{ card.quantity }}
+                  </v-chip>
+
+                  <div class="quantity-controls--overlay">
+                    <v-btn
+                      class="quantity-button"
+                      icon="mdi-plus"
+                      size="small"
+                      density="compact"
+                      variant="flat"
+                      aria-label="Add one copy"
+                      @click.stop="changeQuantity(card, 1, 'sideboard')"
+                    />
+
+                    <v-btn
+                      class="quantity-button"
+                      icon="mdi-minus"
+                      size="small"
+                      density="compact"
+                      variant="flat"
+                      aria-label="Remove one copy"
+                      @click.stop="changeQuantity(card, -1, 'sideboard')"
+                    />
+                  </div>
+                </div>
+
+                <v-menu location="bottom end">
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      class="card-menu-trigger"
+                      icon="mdi-dots-vertical"
+                      size="small"
+                      density="compact"
+                      variant="flat"
+                      aria-label="Open card actions"
+                      @click.stop
+                    />
+                  </template>
+
+                  <v-list density="compact">
+                    <v-list-item
+                      title="Remove card"
+                      prepend-icon="mdi-delete-outline"
+                      @click="removeCard(card.id, 'sideboard')"
+                    />
+                  </v-list>
+                </v-menu>
+              </div>
+            </Transition>
+
+            <!-- Flip-knappen forbliver synlig -->
+            <v-btn
+              v-if="card.cardFaces?.length > 1"
+              class="card-flip-trigger"
+              icon="mdi-sync"
+              size="small"
+              density="compact"
+              variant="flat"
+              aria-label="Flip card"
+              @click.stop="toggleCardFace(card); $event.currentTarget.blur()"
+            />
+          </div>
           </div>
         </div>
       </v-card-text>
@@ -795,6 +913,7 @@ $radius: 12px;
 .deck-card-image {
   position: relative;
   width: 100%;
+  aspect-ratio: 5 / 7;
 
   img {
     display: block;
@@ -803,7 +922,6 @@ $radius: 12px;
     border-radius: 8px;
   }
 }
-
 
 // ==========================================
 // 9. Antal-chip og quantity controls
@@ -821,6 +939,79 @@ $radius: 12px;
   flex-direction: column;
   align-items: center;
   gap: 5px;
+}
+
+// ==========================================
+// Korrekt visning af flipped cards
+// ==========================================
+.card-flip-trigger {
+  position: absolute;
+  top: 35%;
+  right: 8.5%;
+  z-index: 2;
+}
+
+.flip-card {
+  width: 100%;
+  height: 100%;
+  perspective: 1000px;
+
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.4s ease-in-out;
+    transform-style: preserve-3d;
+  }
+
+  &.is-flipped .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip-card-face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+  }
+}
+
+.card-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+
+  // Sørg for at de enkelte controls stadig kan klikkes
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.card-controls-enter-active,
+.card-controls-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.card-controls-enter-from,
+.card-controls-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 // Tilpasser Vuetify-chippen, der viser antal kopier.

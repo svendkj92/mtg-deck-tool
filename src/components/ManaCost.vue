@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { loadManaSymbols } from '../services/manaSymbolsService'
 
 const props = defineProps({
@@ -11,49 +11,66 @@ const props = defineProps({
 
 const symbols = ref([])
 
-onMounted(async () => {
-  if (!props.cost) return
+watch(
+  () => props.cost,
+  async (newCost) => {
+    symbols.value = []
 
-  try {
-    const allSymbols = await loadManaSymbols()
+    if (!newCost) return
 
-    // Find alle mana-symboler i kortets mana cost
-    const symbolNames = props.cost.match(/\{[^}]+\}/g) || []
+    try {
+      const allSymbols = await loadManaSymbols()
 
-    // Find SVG-adressen til hvert symbol
-    symbols.value = symbolNames.map(symbol => {
-      const match = allSymbols.find(
-        item => item.symbol === symbol
-      )
+      // Split mana cost ved Scryfalls // separator
+      const parts = newCost.split(/\s*\/\/\s*/)
 
-      return {
-        name: symbol,
-        image: match?.svg_uri
-      }
-    })
-  } catch (error) {
-    console.error('Could not load mana symbols:', error)
-  }
-})
+      symbols.value = parts.flatMap((part, index) => {
+        const symbolNames = part.match(/\{[^}]+\}/g) || []
+
+        const manaSymbols = symbolNames.map(symbol => {
+          const match = allSymbols.find(
+            item => item.symbol === symbol
+          )
+
+          return {
+            name: symbol,
+            image: match?.svg_uri
+          }
+        })
+
+        // Tilføj separator mellem kortets faces
+        if (index < parts.length - 1) {
+          manaSymbols.push({
+            name: 'separator',
+            image: null
+          })
+        }
+
+        return manaSymbols
+      })
+    } catch (error) {
+      console.error('Could not load mana symbols:', error)
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
-  <div class="mana-cost">
-    <template v-if="symbols.length">
-      <template v-for="(symbol, index) in symbols" :key="index">
-        <img
-          v-if="symbol.image"
-          :src="symbol.image"
-          :alt="symbol.name"
-          :title="symbol.name"
-        />
-        <span v-else>{{ symbol.name }}</span>
-      </template>
-    </template>
+  <span class="mana-cost">
+    <template v-for="(symbol, index) in symbols" :key="index">
+      <span v-if="symbol.name === 'separator'" class="mana-separator">
+        /
+      </span>
 
-    <span v-else-if="cost">{{ cost }}</span>
-    <span v-else>—</span>
-  </div>
+      <img
+        v-else-if="symbol.image"
+        :src="symbol.image"
+        :alt="symbol.name"
+        class="mana-symbol"
+      />
+    </template>
+  </span>
 </template>
 
 <style scoped lang="scss">
@@ -66,5 +83,10 @@ onMounted(async () => {
     width: 20px;
     height: 20px;
   }
+}
+
+.mana-separator {
+  margin: 0 4px;
+  font-weight: 500;
 }
 </style>
