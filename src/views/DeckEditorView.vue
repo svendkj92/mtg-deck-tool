@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { getCurrentUser } from '../services/authService'
-import { loadDecks, saveDeck } from '../services/deckService'
+import { loadDecks, saveDeck, getCardArtCrop } from '../services/deckService'
 import { useRoute } from 'vue-router'
 import ManaCost from '../components/ManaCost.vue'
 
@@ -71,6 +71,7 @@ const deck = ref({
   mainboard: [],
   sideboard: []
 })
+const deckBannerArt = ref('')
 const searchQuery = ref('')
 const cards = ref([])
 const loading = ref(false)
@@ -188,8 +189,6 @@ function addCard(card, targetBoard = 'mainboard', quantity = 1) {
     })
   }
 }
-
-
 
 const flippedCards = ref(new Set())
 const animatingCards = ref(new Set())
@@ -364,6 +363,31 @@ async function loadActiveDeck() {
   }
 }
 
+async function loadDeckBannerArt(card) {
+  deckBannerArt.value = ''
+
+  const artCrop = await getCardArtCrop(card)
+
+  // Kontrollér, at kortet stadig er det første i mainboardet.
+  if (deck.value.mainboard[0]?.id === card?.id) {
+    deckBannerArt.value = artCrop
+  }
+}
+
+watch(
+  () => deck.value.mainboard[0]?.id,
+  (cardId) => {
+    if (!cardId) {
+      deckBannerArt.value = ''
+      return
+    }
+
+    const firstCard = deck.value.mainboard[0]
+    loadDeckBannerArt(firstCard)
+  },
+  { immediate: true }
+)
+
 onMounted(() => {
   loadActiveDeck()
 })
@@ -371,9 +395,25 @@ onMounted(() => {
 
 <template>
   <main class="app">
-    <header class="page-header">
-      <h1>{{deckName}}</h1>
-      <h2>{{deckFormat}}</h2>
+    <header
+      class="deck-banner"
+      :class="{ 'deck-banner--empty': !deckBannerArt }"
+    >
+      <div
+        v-if="deckBannerArt"
+        class="deck-banner__art"
+        :style="{ backgroundImage: `url('${deckBannerArt}')` }"
+      ></div>
+
+      <div class="deck-banner__overlay"></div>
+
+      <div class="deck-banner__info">
+        <span class="deck-banner__format">
+          {{ deckFormat }}
+        </span>
+
+        <h1>{{ deckName }}</h1>
+      </div>
     </header>
 
     
@@ -766,6 +806,7 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+@use "@/assets/variables" as *;
 
 // ==========================================
 // 1. Variabler
@@ -815,16 +856,106 @@ $radius: 12px;
 // Styler sidens overskrift og tilhørende beskrivende tekst.
 // ==========================================
 
-.page-header {
-  margin-bottom: 2rem;
+.deck-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
 
-  h1 {
-    margin: 0 0 0.5rem;
-    font-size: 2.5rem;
+  width: 100%;
+  min-height: 340px;
+  padding: 3rem;
+
+  overflow: hidden;
+  isolation: isolate;
+
+  border-radius: $radius;
+  background: #1c1e25;
+
+  // Artwork placeres i højre side
+  &__art {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: -2;
+
+    width: 70%;
+    height: 100%;
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 
-  p {
-    color: $color-muted;
+  // Gradient der blander venstre baggrund med artwork
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+
+    background: linear-gradient(
+      to right,
+      #1c1e25 0%,
+      #1c1e25 25%,
+      rgba(28, 30, 37, 0.95) 40%,
+      rgba(28, 30, 37, 0.65) 55%,
+      rgba(28, 30, 37, 0.15) 75%,
+      transparent 100%
+    );
+  }
+
+  // Fjern artwork og gradient, hvis decket er tomt
+  &--empty {
+    background: linear-gradient(
+      135deg,
+      #292d38,
+      #17191f
+    );
+  }
+
+  &__info {
+    position: relative;
+    z-index: 1;
+
+    color: white;
+
+    h1 {
+      margin-top: 0.35rem;
+      font-size: 2.2rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+  }
+
+  &__format {
+    color: $color-accent;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (max-width: 600px) {
+  .deck-banner {
+    min-height: 240px;
+    padding: 1.5rem;
+
+    &__art {
+      width: 85%;
+    }
+
+    &__overlay {
+      background: linear-gradient(
+        to right,
+        #1c1e25 0%,
+        rgba(28, 30, 37, 0.95) 35%,
+        rgba(28, 30, 37, 0.6) 65%,
+        rgba(28, 30, 37, 0.15) 100%
+      );
+    }
+
+    &__info h1 {
+      font-size: 1.6rem;
+    }
   }
 }
 
@@ -914,12 +1045,23 @@ $radius: 12px;
   position: relative;
   width: 100%;
   aspect-ratio: 5 / 7;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
 
+  &:hover {
+    transform: translateY(-4px);
+    filter: drop-shadow(0 0 8px rgba($color-accent, 0.5));
+  }  
+    
   img {
     display: block;
     width: 100%;
     height: auto;
-    border-radius: 8px;
+    border-radius: 5.5%;
+    transition:
+      transform 0.2s ease,
+      filter 0.2s ease;    
   }
 }
 
