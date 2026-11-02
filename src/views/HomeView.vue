@@ -2,7 +2,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import {
-  createDeck,
   loadDecks,
   deleteDeck,
   saveDeck,
@@ -16,11 +15,6 @@ const router = useRouter()
 const userId = ref('')
 const savedDecks = ref([])
 const authError = ref('')
-const deckSaveError = ref('')
-const deckSaveMessage = ref('')
-
-const deckName = ref('')
-const deckFormat = ref('Standard')
 
 const formats = [
   'Standard',
@@ -34,6 +28,7 @@ const formats = [
 ]
 
 // Edit dialog
+const createDialog = ref(false)
 const editDialog = ref(false)
 const editingDeck = ref(null)
 
@@ -146,36 +141,6 @@ async function loginAnonymously() {
   }
 }
 
-// Opretter et nyt deck.
-async function createNewDeck() {
-  deckSaveError.value = ''
-  deckSaveMessage.value = ''
-
-  try {
-    if (!userId.value) {
-      throw new Error('Please wait for login to complete.')
-    }
-
-    if (!deckName.value.trim()) {
-      throw new Error('Please enter a deck name.')
-    }
-
-    const deckId = await createDeck(
-      userId.value,
-      deckName.value.trim(),
-      deckFormat.value
-    )
-
-    await refreshDecks()
-
-    router.push(`/deck/${deckId}`)
-
-  } catch (error) {
-    console.error('Could not create deck:', error)
-    deckSaveError.value = error.message
-  }
-}
-
 // Sletter et deck.
 async function removeDeck(deck) {
   const confirmed = window.confirm(
@@ -195,6 +160,25 @@ async function removeDeck(deck) {
     console.error('Could not delete deck:', error)
     deckSaveError.value = error.message
   }
+}
+
+const manaColorOrder = ['W', 'U', 'B', 'R', 'G']
+
+function getDeckColors(deck) {
+  const allCards = [
+    ...(deck.mainboard || []),
+    ...(deck.sideboard || [])
+  ]
+
+  const colors = new Set()
+
+  allCards.forEach(card => {
+    card.colors?.forEach(color => {
+      colors.add(color)
+    })
+  })
+
+  return manaColorOrder.filter(color => colors.has(color))
 }
 
 // Navigerer til deck-editoren.
@@ -260,6 +244,15 @@ onMounted(() => {
 
             <div class="deck-card__overlay"></div>
 
+            <!-- Manasymbols -->
+            <div class="deck-card__mana-symbols">
+              <img
+                v-for="color in getDeckColors(savedDeck)"
+                :key="color"
+                :src="`https://svgs.scryfall.io/card-symbols/${color}.svg`"
+                :alt="`${color} mana`"
+              />
+            </div>
             <!-- Deck information -->
             <div class="deck-card__info">
               <span class="deck-card__format">
@@ -364,62 +357,66 @@ onMounted(() => {
       </v-card>
     </v-dialog>
 
-    <!-- Create deck -->
-    <v-card
-      class="dashboard-section create-section"
-      variant="outlined"
+    <!-- Create deck dialog -->
+    <v-dialog
+      v-model="createDialog"
+      max-width="450"
     >
+      <v-card class="edit-dialog">
 
-      <v-card-title>
-        Create a New Deck
-      </v-card-title>
+        <v-card-title>
+          Create New Deck
+        </v-card-title>
 
-      <v-card-text>
-        <v-form @submit.prevent="createNewDeck">
+        <v-card-text>
+          <v-form @submit.prevent="createNewDeck">
 
-          <v-text-field
-            v-model="deckName"
-            label="Deck name"
-            placeholder="e.g. Mono Red Aggro"
-            required
-          />
+            <v-text-field
+              v-model="deckName"
+              label="Deck name"
+              placeholder="e.g. Mono Red Aggro"
+              required
+            />
 
-          <v-select
-            v-model="deckFormat"
-            :items="formats"
-            label="Format"
-          />
+            <v-select
+              v-model="deckFormat"
+              :items="formats"
+              label="Format"
+            />
 
-          <v-alert
-            v-if="deckSaveError"
-            type="error"
-            variant="tonal"
-            class="mb-4"
-          >
-            {{ deckSaveError }}
-          </v-alert>
+            <v-alert
+              v-if="deckSaveError"
+              type="error"
+              variant="tonal"
+              class="mb-4"
+            >
+              {{ deckSaveError }}
+            </v-alert>
 
-          <v-alert
-            v-if="deckSaveMessage"
-            type="success"
-            variant="tonal"
-            class="mb-4"
-          >
-            {{ deckSaveMessage }}
-          </v-alert>
+            <div class="edit-dialog__actions">
 
-          <v-btn
-            type="submit"
-            color="primary"
-            :disabled="!userId"
-          >
-            Create deck
-          </v-btn>
+              <v-btn
+                variant="text"
+                @click="closeCreateDialog"
+              >
+                Cancel
+              </v-btn>
 
-        </v-form>
-      </v-card-text>
+              <v-btn
+                color="primary"
+                type="submit"
+                :disabled="!deckName.trim()"
+              >
+                Create Deck
+              </v-btn>
 
-    </v-card>
+            </div>
+
+          </v-form>
+        </v-card-text>
+
+      </v-card>
+    </v-dialog>
 
   </main>
 </template>
@@ -476,6 +473,25 @@ onMounted(() => {
       0 0 0 1px rgba($color-accent, 0.7),
       0 8px 24px rgba($color-accent, 0.2);
   }
+
+  // Mana Symbols
+  .deck-card__mana-symbols {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  img {
+    width: 24px;
+    height: 24px;
+
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+  }
+}
 
   // Artwork
   &__art {
@@ -562,13 +578,6 @@ onMounted(() => {
 .loading-state {
   padding: 2rem 0;
   color: rgba(255, 255, 255, 0.6);
-}
-
-// Create deck section
-.create-section {
-  border: 1px solid #30323a;
-  border-radius: 12px;
-  background: #1c1e25;
 }
 
 // Edit dialog

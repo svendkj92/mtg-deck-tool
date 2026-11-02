@@ -80,6 +80,7 @@ const deckFormat = ref('Standard')
 const activeDeckId = ref('')
 const deckName = ref('')
 const searchMenuOpen = ref(false)
+const loadError = ref('')
 
 
 let searchTimeout = null
@@ -338,7 +339,9 @@ watch(
 )
 
 async function loadActiveDeck() {
-    try {
+  loadError.value = ''
+
+  try {
     if (!userId.value) {
       await loginAnonymously()
     }
@@ -348,6 +351,7 @@ async function loadActiveDeck() {
     }
 
     const decks = await loadDecks(userId.value)
+    console.log('Loaded decks:', decks)
 
     const matchingDeck = decks.find(
       savedDeck => savedDeck.id === route.params.id
@@ -358,10 +362,14 @@ async function loadActiveDeck() {
     }
 
     selectDeck(matchingDeck)
+
   } catch (error) {
     console.error('Could not load deck:', error)
+    loadError.value = error.message
   }
 }
+
+
 
 async function loadDeckBannerArt(card) {
   deckBannerArt.value = ''
@@ -388,13 +396,25 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
-  loadActiveDeck()
-})
+watch(
+  () => route.params.id,
+  () => {
+    loadActiveDeck()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
   <main class="app">
+    <v-alert
+      v-if="loadError"
+      type="error"
+      variant="tonal"
+      class="ma-4"
+    >
+      {{ loadError }}
+    </v-alert>
     <header
       class="deck-banner"
       :class="{ 'deck-banner--empty': !deckBannerArt }"
@@ -416,7 +436,7 @@ onMounted(() => {
       </div>
     </header>
 
-    
+    <div class="deck-editor-content">
     <v-menu
       v-model="searchMenuOpen"
       :disabled="!searchQuery.trim()"
@@ -545,6 +565,7 @@ onMounted(() => {
         </v-card-text>
       </v-card>
     </v-menu>
+    </div>
 
 
     <v-card class="deck-section" variant="flat">
@@ -845,9 +866,9 @@ $radius: 12px;
 // ==========================================
 
 .app {
-  width: min(1400px, 94%);
-  margin: 0 auto;
-  padding: 3rem 0;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 3rem;
 }
 
 
@@ -970,6 +991,8 @@ $radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  margin-left: 3%;
+  margin-right: 3%;
   max-height: 60vh;
   overflow-y: auto;
 }
@@ -977,6 +1000,11 @@ $radius: 12px;
 .search-result {
   border-color: $color-border;
   background: $color-surface;
+}
+
+.deck-editor-content {
+  width: min(1200px, 94%);
+  margin: 2rem auto 0;
 }
 
 
@@ -987,7 +1015,8 @@ $radius: 12px;
 // ==========================================
 
 .deck-section {
-  margin-top: 3rem;
+  width: min(1200px, 94%);
+  margin: 3rem auto 0;
 }
 
 .deck-header {

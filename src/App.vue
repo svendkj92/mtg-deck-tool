@@ -1,3 +1,8 @@
+
+<script setup>
+import CreateDeckDialog from './components/CreateDeckDialog.vue'
+</script>
+
 <template>
   <v-app>
     <!-- Header -->
@@ -16,10 +21,14 @@
           to="/"
           exact
         />
+
+        <v-divider class="my-2" />
+
+        <CreateDeckDialog />
       </v-list>
     </v-navigation-drawer>
 
-    <!-- Sideindhold -->
+    <!-- Main content -->
     <v-main>
       <RouterView />
     </v-main>
