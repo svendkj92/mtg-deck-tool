@@ -24,7 +24,7 @@ watch(
     try {
       const allSymbols = await loadManaSymbols()
 
-      // Split mana cost ved Scryfalls // separator
+      // Split the mana cost using Scryfall's // separator.
       const parts = newCost.split(/\s*\/\/\s*/)
 
       symbols.value = parts.flatMap((part, index) => {
@@ -41,7 +41,7 @@ watch(
           }
         })
 
-        // Tilføj separator mellem kortets faces
+        // Add a separator between the card's faces.
         if (index < parts.length - 1) {
           manaSymbols.push({
             name: 'separator',
