@@ -10,7 +10,7 @@ const route = useRoute()
 
 // Authentication state and anonymous sign-in
 // The Firebase UID is used to read and save this user's decks.
-//Anonymt login
+// Anonymous sign-in
 const userId = ref('')
 const authError = ref('')
 
@@ -71,7 +71,7 @@ function selectDeck(savedDeck) {
 }
 
 // Editor state: values shared by the search UI, deck display, and save workflow.
-// Reaktiv state
+// Reactive state
 const deck = ref({
   mainboard: [],
   sideboard: []
@@ -90,7 +90,7 @@ const loadError = ref('')
 
 // Card search: debounce is managed by the watcher below before this request runs.
 let searchTimeout = null
-// Hent kort fra Scryfall
+// Fetch cards from Scryfall
 async function searchCards() {
   clearTimeout(searchTimeout)
 
@@ -113,7 +113,7 @@ async function searchCards() {
 
     const data = await response.json()
     cards.value = data.data.map(card => {
-      // Multifaced cards kan have mana cost på de enkelte faces
+      // Multi-faced cards may have a mana cost on each individual face.
       if (card.card_faces && !card.mana_cost) {
         return {
           ...card,
@@ -143,10 +143,10 @@ watch(searchMenuOpen, (isOpen) => {
 })
 
 watch(searchQuery, (newValue) => {
-  // Annuller den tidligere timer
+  // Cancel the previous timer.
   clearTimeout(searchTimeout)
 
-  // Hvis søgefeltet er tomt, rydder vi op
+  // If the search field is empty, clear the related state.
   if (!newValue.trim()) {
     searchMenuOpen.value = false
     cards.value = []
@@ -154,7 +154,7 @@ watch(searchQuery, (newValue) => {
     return
   }
 
-  // Start en ny timer på 800 ms
+  // Start a new timer with an 800 ms delay.
   searchTimeout = setTimeout(() => {
     searchCards()
   }, 800)
@@ -203,12 +203,12 @@ const flippedCards = ref(new Set())
 const animatingCards = ref(new Set())
 
 function toggleCardFace(card) {
-  // Start animationen
+  // Start the animation.
   const animating = new Set(animatingCards.value)
   animating.add(card.id)
   animatingCards.value = animating
 
-  // Vend kortet
+  // Flip the card.
   const updatedCards = new Set(flippedCards.value)
 
   if (updatedCards.has(card.id)) {
@@ -220,7 +220,7 @@ function toggleCardFace(card) {
   flippedCards.value = updatedCards
 }
 
-// Kaldes, når CSS-transitionen er færdig
+// Called when the CSS transition has finished.
 function finishCardFlip(cardId) {
   const animating = new Set(animatingCards.value)
   animating.delete(cardId)
@@ -294,13 +294,13 @@ const mainboardGroups = computed(() => {
 })
 
 const deckDisplayGroups = computed(() => {
-  // Start med de eksisterende Mainboard-grupper
+  // Start with the existing mainboard groups.
   const groups = mainboardGroups.value.map(group => ({
     ...group,
     targetBoard: 'mainboard'
   }))
 
-  // Tilføj Sideboard som én samlet gruppe
+  // Add the sideboard as a single group.
   if (currentFormatRules.value.sideboardEnabled && deck.value.sideboard.length > 0) {
     groups.push({
       name: 'Sideboard',
@@ -401,11 +401,11 @@ const sideboardIsValid = computed(() =>
 watch(
   [deck, deckName, deckFormat],
   () => {
-    // Gem ikke, mens et eksisterende deck indlæses
+    // Do not save while an existing deck is loading.
     if (isLoadingDeck) return
 
-    // Nulstil den tidligere timer, hvis brugeren laver
-    // endnu en ændring inden for 800 millisekunder
+    // Reset the previous timer if the user makes
+    // another change within 800 milliseconds.
     clearTimeout(saveTimeout)
 
     saveTimeout = setTimeout(() => {
@@ -460,7 +460,7 @@ async function loadDeckBannerArt(card) {
 
   const artCrop = await getCardArtCrop(card)
 
-  // Kontrollér, at kortet stadig er det første i mainboardet.
+  // Check that the card is still the first card in the mainboard.
   if (deck.value.mainboard[0]?.id === card?.id) {
     deckBannerArt.value = artCrop
   }
@@ -565,7 +565,7 @@ watch(
             >
               <v-card-text>
                 <v-row align="center">
-                  <!-- Kortinformation -->
+                  <!-- Card information -->
                   <v-col>
                     <div class="text-subtitle-1 font-weight-bold">
                       {{ card.name }}
@@ -580,7 +580,7 @@ watch(
                     </div>
                   </v-col>
 
-                  <!-- Mainboard-knapper -->
+                  <!-- Mainboard buttons -->
                   <v-col cols="auto">
                     <div class="text-caption text-medium-emphasis mb-1">
                       Mainboard
@@ -605,7 +605,7 @@ watch(
                     </v-btn-group>
                   </v-col>
 
-                  <!-- Sideboard-knapper -->
+                  <!-- Sideboard buttons -->
                   <v-col
                     v-if="currentFormatRules.sideboardEnabled"
                     cols="auto"
@@ -654,7 +654,7 @@ watch(
 
     
     <v-card class="deck-section" variant="flat">
-      <!-- Overordnet Mainboard-header -->
+      <!-- Mainboard header -->
       <v-card-title class="deck-header">
         <h2>Deck</h2>
 
@@ -668,19 +668,19 @@ watch(
       </v-card-title>
 
       <v-card-text>
-        <!-- Besked, hvis Mainboard er tomt -->
+        <!-- Message shown when the mainboard is empty -->
         <p v-if="deck.mainboard.length === 0" class="empty-deck">
           Your deck is empty. Search for cards and add them!
         </p>
 
-        <!-- Alle grupper -->
+        <!-- All groups -->
       <div class="deck-groups"> 
         <div
           v-for="group in deckDisplayGroups"
           :key="group.name"
           class="deck-group"
         >
-          <!-- Gruppe-header -->
+          <!-- Group header -->
           <div class="deck-group-header">
             <h3>{{ group.name }}</h3>
 
@@ -692,7 +692,7 @@ watch(
             </v-chip>
           </div>
 
-          <!-- Kortene i gruppen -->
+          <!-- Cards in the group -->
           <div
             v-if="group.cards.length"
             class="deck-grid"
@@ -703,7 +703,7 @@ watch(
               class="deck-item"
             >
               <div class="deck-card-image">
-                <!-- Kortets 3D-flip -->
+                <!-- Card 3D flip -->
                 <div
                   class="flip-card"
                   @transitionend="finishCardFlip(card.id)"
@@ -723,7 +723,7 @@ watch(
                   </div>
                 </div>
 
-                <!-- Kortets controls -->
+                <!-- Card controls -->
                 <Transition name="card-controls">
                   <div
                     v-if="!animatingCards.has(card.id)"
@@ -787,7 +787,7 @@ watch(
                   </div>
                 </Transition>
 
-                <!-- Flip-knappen -->
+                <!-- Flip button -->
                 <v-btn
                   v-if="card.cardFaces?.length > 1"
                   class="card-flip-trigger"
@@ -814,8 +814,8 @@ watch(
 
 // ==========================================
 // 1. Variabler
-// Samler farver og værdier, der bruges flere steder.
-// Gør det nemmere at ændre designets grundelementer.
+// Collects colors and values used in multiple places.
+// Makes it easier to change the design's core elements.
 // ==========================================
 
 $color-surface: #1c1e25;
@@ -828,8 +828,8 @@ $radius: 12px;
 
 // ==========================================
 // 2. Globale styles
-// Sørger for ensartet beregning af elementers størrelse
-// og fjerner browserens standardmargin på body.
+// Ensures consistent sizing calculations for elements
+// and removes the browser's default body margin.
 // ==========================================
 
 :global(*) {
@@ -844,8 +844,8 @@ $radius: 12px;
 
 // ==========================================
 // 3. Appens overordnede layout
-// Begrænser indholdets maksimale bredde og centrerer
-// det på siden. Tilføjer luft omkring indholdet.
+// Limits the content's maximum width and centers it
+// on the page. Adds spacing around the content.
 // ==========================================
 
 .app {
@@ -857,7 +857,7 @@ $radius: 12px;
 
 // ==========================================
 // 4. Sidens header
-// Styler sidens overskrift og tilhørende beskrivende tekst.
+// Styles the page heading and its descriptive text.
 // ==========================================
 
 .deck-banner {
@@ -875,7 +875,7 @@ $radius: 12px;
   border-radius: $radius;
   background: #1c1e25;
 
-  // Artwork placeres i højre side
+  // Positions the artwork on the right side.
   &__art {
     position: absolute;
     inset: 0 0 0 auto;
@@ -889,7 +889,7 @@ $radius: 12px;
     background-repeat: no-repeat;
   }
 
-  // Gradient der blander venstre baggrund med artwork
+  // Gradient that blends the left background with the artwork.
   &__overlay {
     position: absolute;
     inset: 0;
@@ -906,7 +906,7 @@ $radius: 12px;
     );
   }
 
-  // Fjern artwork og gradient, hvis decket er tomt
+  // Hide the artwork and gradient when the deck is empty.
   &--empty {
     background: linear-gradient(
       135deg,
@@ -966,8 +966,8 @@ $radius: 12px;
 
 // ==========================================
 // 5. Søgeresultater
-// Arrangerer søgeresultaterne lodret med afstand imellem.
-// Tilpasser Vuetify-kortenes kant og baggrund.
+// Arranges search results vertically with spacing between them.
+// Adjusts the Vuetify cards' borders and backgrounds.
 // ==========================================
 
 .search-results {
@@ -993,8 +993,8 @@ $radius: 12px;
 
 // ==========================================
 // 6. Mainboard og sideboard
-// Styler de overordnede sektioner, deres overskrifter
-// samt teksten, der vises, når et deck er tomt.
+// Styles the main sections and their headings
+// as well as the text shown when a deck is empty.
 // ==========================================
 
 .deck-section {
@@ -1048,12 +1048,12 @@ $radius: 12px;
   }
 }
 
-// Markerer ugyldige kortantal med en fejlfarve.
+// Highlights invalid card counts with an error color.
 .count-invalid {
   color: $color-error !important;
 }
 
-// Centrerer beskeden, når et deck ikke indeholder kort.
+// Centers the message when a deck contains no cards.
 .empty-deck {
   padding: 2rem 1rem;
   color: $color-muted;
@@ -1063,8 +1063,8 @@ $radius: 12px;
 
 // ==========================================
 // 7. Kort-grid
-// Arrangerer kortene i et responsivt grid.
-// Hvert kort får sin egen plads i grid'et.
+// Arranges the cards in a responsive grid.
+// Each card gets its own space in the grid.
 // ==========================================
 
 .deck-grid {
@@ -1085,8 +1085,8 @@ $radius: 12px;
 
 // ==========================================
 // 8. Kortbilleder
-// Sørger for korrekt visning af kortbillederne
-// og skaber en positioneringsramme for overlays.
+// Ensures card images are displayed correctly
+// and creates a positioning context for overlays.
 // ==========================================
 
 .deck-card-image {
@@ -1115,8 +1115,8 @@ $radius: 12px;
 
 // ==========================================
 // 9. Antal-chip og quantity controls
-// Placering af kortets antal og plus/minus-knapper
-// oven på kortbilledet.
+// Positions the card quantity and plus/minus buttons
+// on top of the card image.
 // ==========================================
 
 .card-quantity-overlay {
@@ -1132,7 +1132,7 @@ $radius: 12px;
 }
 
 // ==========================================
-// Korrekt visning af flipped cards
+// Correct display of flipped cards.
 // ==========================================
 .card-flip-trigger {
   position: absolute;
@@ -1185,7 +1185,7 @@ $radius: 12px;
   z-index: 2;
   pointer-events: none;
 
-  // Sørg for at de enkelte controls stadig kan klikkes
+  // Ensures the individual controls remain clickable.
   > * {
     pointer-events: auto;
   }
@@ -1204,7 +1204,7 @@ $radius: 12px;
   transform: scale(0.95);
 }
 
-// Tilpasser Vuetify-chippen, der viser antal kopier.
+// Adjusts the Vuetify chip that displays the copy count.
 .card-quantity-badge {
   width: 32px;
   min-width: 32px;
@@ -1213,8 +1213,8 @@ $radius: 12px;
   border-radius: 8px !important;
 }
 
-// Arrangerer plus/minus-knapperne lodret.
-// Knapperne er skjult som standard.
+// Arranges the plus/minus buttons vertically.
+// The buttons are hidden by default.
 .quantity-controls--overlay {
   display: flex;
   flex-direction: column;
@@ -1225,15 +1225,15 @@ $radius: 12px;
   transition: opacity 0.15s ease;
 }
 
-// Viser knapperne, når brugeren holder musen over kortet
-// eller navigerer til dem med tastaturet.
+// Shows the buttons when the user hovers over the card
+// or navigates to them using the keyboard.
 .deck-card-image:hover .quantity-controls--overlay,
 .deck-card-image:focus-within .quantity-controls--overlay {
   opacity: 1;
   pointer-events: auto;
 }
 
-// Fælles udseende og størrelse på plus/minus-knapperne.
+// Shared appearance and size for the plus/minus buttons.
 .quantity-button {
   width: 32px !important;
   height: 32px !important;
@@ -1247,7 +1247,7 @@ $radius: 12px;
 
 // ==========================================
 // 10. Ellipsemenu
-// Positionerer menu-knappen øverst til højre på kortet.
+// Positions the menu button at the card's top-right corner.
 // ==========================================
 
 .card-menu-trigger {
@@ -1267,7 +1267,7 @@ $radius: 12px;
 
 // ==========================================
 // 11. Responsivt design
-// Tilpasser grid, afstande og knapper til mindre skærme.
+// Adapts the grid, spacing, and buttons for smaller screens.
 // ==========================================
 
 @media (max-width: 480px) {
@@ -1283,13 +1283,13 @@ $radius: 12px;
     padding: 1rem;
   }
 
-  // Viser to kort pr. række på små skærme.
+  // Displays two cards per row on small screens.
   .deck-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.6rem;
   }
 
-  // Gør antal-chip og knapper lidt mindre.
+  // Makes the quantity chip and buttons slightly smaller.
   .card-quantity-badge {
     width: 28px;
     min-width: 28px;
@@ -1303,9 +1303,9 @@ $radius: 12px;
 }
 
 
-// Touch-enheder:
-// Viser altid plus/minus-knapperne, da hover ikke
-// fungerer på samme måde som på en computer.
+// Touch devices:
+// Always displays the plus/minus buttons because hover
+// does not work the same way as on a computer.
 
 @media (hover: none) {
   .quantity-controls--overlay {
