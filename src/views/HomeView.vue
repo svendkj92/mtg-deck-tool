@@ -253,7 +253,7 @@ onMounted(() => {
 
             <div class="deck-card__overlay"></div>
 
-            <!-- Manasymbols -->
+            <!-- Mana symbols -->
             <div class="deck-card__mana-symbols">
               <img
                 v-for="color in getDeckColors(savedDeck)"
