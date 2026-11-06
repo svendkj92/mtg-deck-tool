@@ -283,6 +283,26 @@ const mainboardGroups = computed(() => {
     }))
 })
 
+const deckDisplayGroups = computed(() => {
+  // Start med de eksisterende Mainboard-grupper
+  const groups = mainboardGroups.value.map(group => ({
+    ...group,
+    targetBoard: 'mainboard'
+  }))
+
+  // Tilføj Sideboard som én samlet gruppe
+  if (currentFormatRules.value.sideboardEnabled) {
+    groups.push({
+      name: 'Sideboard',
+      cards: deck.value.sideboard,
+      total: totalSideboardCards.value,
+      targetBoard: 'sideboard'
+    })
+  }
+
+  return groups
+})
+
 const totalCards = computed(() =>
   deck.value.mainboard.reduce(
     (total, card) => total + card.quantity,
@@ -618,7 +638,9 @@ watch(
     </div>
 
 
+    
     <v-card class="deck-section" variant="flat">
+      <!-- Overordnet Mainboard-header -->
       <v-card-title class="deck-header">
         <h2>Mainboard</h2>
 
@@ -632,247 +654,150 @@ watch(
       </v-card-title>
 
       <v-card-text>
+        <!-- Besked, hvis Mainboard er tomt -->
         <p v-if="deck.mainboard.length === 0" class="empty-deck">
           Your deck is empty. Search for cards and add them!
         </p>
 
-        <div v-else class="deck-grid">
-          <div
-            v-for="card in deck.mainboard"
-            :key="card.id"
-            class="deck-item"
-          >
-          <div class="deck-card-image">
-            <!-- Kortets 3D-flip -->
-            <div
-              class="flip-card"
-              @transitionend="finishCardFlip(card.id)"
-              :class="{ 'is-flipped': flippedCards.has(card.id) }"
-            >
-              <div class="flip-card-inner">
-                <div class="flip-card-face flip-card-front">
-                  <img :src="card.imageUrl" :alt="card.name" />
-                </div>
-
-                <div class="flip-card-face flip-card-back">
-                  <img
-                    :src="card.cardFaces?.[1]?.imageUrl || card.imageUrl"
-                    :alt="card.cardFaces?.[1]?.name || card.name"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Controls animeres væk under flip -->
-            <Transition name="card-controls">
-              <div
-                v-if="!animatingCards.has(card.id)"
-                class="card-controls"
-              >
-                <div class="card-quantity-overlay">
-                  <v-chip
-                    class="card-quantity-badge"
-                    color="surface"
-                    size="small"
-                    variant="flat"
-                  >
-                    x{{ card.quantity }}
-                  </v-chip>
-
-                  <div class="quantity-controls--overlay">
-                    <v-btn
-                      class="quantity-button"
-                      icon="mdi-plus"
-                      size="small"
-                      density="compact"
-                      variant="flat"
-                      aria-label="Add one copy"
-                      @click.stop="changeQuantity(card, 1, 'mainboard')"
-                    />
-
-                    <v-btn
-                      class="quantity-button"
-                      icon="mdi-minus"
-                      size="small"
-                      density="compact"
-                      variant="flat"
-                      aria-label="Remove one copy"
-                      @click.stop="changeQuantity(card, -1, 'mainboard')"
-                    />
-                  </div>
-                </div>
-
-                <v-menu location="bottom end">
-                  <template #activator="{ props }">
-                    <v-btn
-                      v-bind="props"
-                      class="card-menu-trigger"
-                      icon="mdi-dots-vertical"
-                      size="small"
-                      density="compact"
-                      variant="flat"
-                      aria-label="Open card actions"
-                      @click.stop
-                    />
-                  </template>
-
-                  <v-list density="compact">
-                    <v-list-item
-                      title="Remove card"
-                      prepend-icon="mdi-delete-outline"
-                      @click="removeCard(card.id, 'mainboard')"
-                    />
-                  </v-list>
-                </v-menu>
-              </div>
-            </Transition>
-
-            <!-- Flip-knappen forbliver synlig -->
-            <v-btn
-              v-if="card.cardFaces?.length > 1"
-              class="card-flip-trigger"
-              icon="mdi-sync"
-              size="small"
-              density="compact"
-              variant="flat"
-              aria-label="Flip card"
-              @click.stop="toggleCardFace(card); $event.currentTarget.blur()"
-            />
-          </div>
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
-    
-    <v-card
-      v-if="currentFormatRules.sideboardEnabled"
-      class="deck-section"
-      variant="flat"
-    >
-      <v-card-title class="deck-header">
-        <h2>Sideboard</h2>
-
-        <v-chip
-          :color="sideboardIsValid ? 'primary' : 'error'"
-          size="small"
-          variant="tonal"
+        <!-- Alle grupper -->
+        <div
+          v-for="group in deckDisplayGroups"
+          :key="group.name"
+          class="deck-group"
         >
-          {{ totalSideboardCards }}/{{ currentFormatRules.sideboardLimit }}
-        </v-chip>
-      </v-card-title>
+          <!-- Gruppe-header -->
+          <div class="deck-group-header">
+            <h3>{{ group.name }}</h3>
 
-      <v-card-text>
-        <p v-if="deck.sideboard.length === 0" class="empty-deck">
-          Your sideboard is empty. Add cards to get started!
-        </p>
-
-        <div v-else class="deck-grid">
-          <div
-            v-for="card in deck.sideboard"
-            :key="card.id"
-            class="deck-card"
-          >
-            <div class="deck-card-image">
-            <!-- Kortets 3D-flip -->
-            <div
-              class="flip-card"
-              @transitionend="finishCardFlip(card.id)"
-              :class="{ 'is-flipped': flippedCards.has(card.id) }"
+            <v-chip
+              size="small"
+              variant="tonal"
             >
-              <div class="flip-card-inner">
-                <div class="flip-card-face flip-card-front">
-                  <img :src="card.imageUrl" :alt="card.name" />
-                </div>
+              {{ group.total }}
+            </v-chip>
+          </div>
 
-                <div class="flip-card-face flip-card-back">
-                  <img
-                    :src="card.cardFaces?.[1]?.imageUrl || card.imageUrl"
-                    :alt="card.cardFaces?.[1]?.name || card.name"
-                  />
-                </div>
-              </div>
-            </div>
+          <!-- Kortene i gruppen -->
+          <div
+            v-if="group.cards.length"
+            class="deck-grid"
+          >
+            <div
+              v-for="card in group.cards"
+              :key="card.id"
+              class="deck-item"
+            >
+              <div class="deck-card-image">
+                <!-- Kortets 3D-flip -->
+                <div
+                  class="flip-card"
+                  @transitionend="finishCardFlip(card.id)"
+                  :class="{ 'is-flipped': flippedCards.has(card.id) }"
+                >
+                  <div class="flip-card-inner">
+                    <div class="flip-card-face flip-card-front">
+                      <img :src="card.imageUrl" :alt="card.name" />
+                    </div>
 
-            <!-- Controls animeres væk under flip -->
-            <Transition name="card-controls">
-              <div
-                v-if="!animatingCards.has(card.id)"
-                class="card-controls"
-              >
-                <div class="card-quantity-overlay">
-                  <v-chip
-                    class="card-quantity-badge"
-                    color="surface"
-                    size="small"
-                    variant="flat"
-                  >
-                    x{{ card.quantity }}
-                  </v-chip>
-
-                  <div class="quantity-controls--overlay">
-                    <v-btn
-                      class="quantity-button"
-                      icon="mdi-plus"
-                      size="small"
-                      density="compact"
-                      variant="flat"
-                      aria-label="Add one copy"
-                      @click.stop="changeQuantity(card, 1, 'sideboard')"
-                    />
-
-                    <v-btn
-                      class="quantity-button"
-                      icon="mdi-minus"
-                      size="small"
-                      density="compact"
-                      variant="flat"
-                      aria-label="Remove one copy"
-                      @click.stop="changeQuantity(card, -1, 'sideboard')"
-                    />
+                    <div class="flip-card-face flip-card-back">
+                      <img
+                        :src="card.cardFaces?.[1]?.imageUrl || card.imageUrl"
+                        :alt="card.cardFaces?.[1]?.name || card.name"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <v-menu location="bottom end">
-                  <template #activator="{ props }">
-                    <v-btn
-                      v-bind="props"
-                      class="card-menu-trigger"
-                      icon="mdi-dots-vertical"
-                      size="small"
-                      density="compact"
-                      variant="flat"
-                      aria-label="Open card actions"
-                      @click.stop
-                    />
-                  </template>
+                <!-- Kortets controls -->
+                <Transition name="card-controls">
+                  <div
+                    v-if="!animatingCards.has(card.id)"
+                    class="card-controls"
+                  >
+                    <div class="card-quantity-overlay">
+                      <v-chip
+                        class="card-quantity-badge"
+                        color="surface"
+                        size="small"
+                        variant="flat"
+                      >
+                        x{{ card.quantity }}
+                      </v-chip>
 
-                  <v-list density="compact">
-                    <v-list-item
-                      title="Remove card"
-                      prepend-icon="mdi-delete-outline"
-                      @click="removeCard(card.id, 'sideboard')"
-                    />
-                  </v-list>
-                </v-menu>
+                      <div class="quantity-controls--overlay">
+                        <v-btn
+                          class="quantity-button"
+                          icon="mdi-plus"
+                          size="small"
+                          density="compact"
+                          variant="flat"
+                          aria-label="Add one copy"
+                          @click.stop="changeQuantity(card, 1, group.targetBoard)"
+                        />
+
+                        <v-btn
+                          class="quantity-button"
+                          icon="mdi-minus"
+                          size="small"
+                          density="compact"
+                          variant="flat"
+                          aria-label="Remove one copy"
+                          @click.stop="changeQuantity(card, -1, group.targetBoard)"
+                        />
+                      </div>
+                    </div>
+
+                    <v-menu location="bottom end">
+                      <template #activator="{ props }">
+                        <v-btn
+                          v-bind="props"
+                          class="card-menu-trigger"
+                          icon="mdi-dots-vertical"
+                          size="small"
+                          density="compact"
+                          variant="flat"
+                          aria-label="Open card actions"
+                          @click.stop
+                        />
+                      </template>
+
+                      <v-list density="compact">
+                        <v-list-item
+                          title="Remove card"
+                          prepend-icon="mdi-delete-outline"
+                          @click="removeCard(card.id, group.targetBoard)"
+                        />
+                      </v-list>
+                    </v-menu>
+                  </div>
+                </Transition>
+
+                <!-- Flip-knappen -->
+                <v-btn
+                  v-if="card.cardFaces?.length > 1"
+                  class="card-flip-trigger"
+                  icon="mdi-sync"
+                  size="small"
+                  density="compact"
+                  variant="flat"
+                  aria-label="Flip card"
+                  @click.stop="toggleCardFace(card); $event.currentTarget.blur()"
+                />
               </div>
-            </Transition>
+            </div>
+          </div>
 
-            <!-- Flip-knappen forbliver synlig -->
-            <v-btn
-              v-if="card.cardFaces?.length > 1"
-              class="card-flip-trigger"
-              icon="mdi-sync"
-              size="small"
-              density="compact"
-              variant="flat"
-              aria-label="Flip card"
-              @click.stop="toggleCardFace(card); $event.currentTarget.blur()"
-            />
-          </div>
-          </div>
+          <!-- Tom Sideboard-gruppe -->
+          <p
+            v-else-if="group.targetBoard === 'sideboard'"
+            class="empty-deck"
+          >
+            Your sideboard is empty. Add cards to get started!
+          </p>
         </div>
       </v-card-text>
     </v-card>
+
   </main>
 </template>
 
@@ -1081,6 +1006,32 @@ $radius: 12px;
   h2 {
     margin: 0;
     font-size: 1.5rem;
+  }
+}
+
+.deck-group {
+  margin-top: 2rem;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
+.deck-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+
+  border-bottom: 1px solid $color-border;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
   }
 }
 
