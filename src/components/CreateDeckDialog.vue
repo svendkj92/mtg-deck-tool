@@ -7,6 +7,7 @@ import { getCurrentUser } from '../services/authService'
 
 const router = useRouter()
 
+// Dialog visibility and form values are kept separate from the async creation state.
 // Dialog state
 const dialog = ref(false)
 
@@ -25,10 +26,12 @@ const formats = [
   'Commander'
 ]
 
+// Feedback state: validation/API errors and loading indicator for submission.
 // Feedback state
 const errorMessage = ref('')
 const creatingDeck = ref(false)
 
+// Reset the form each time the dialog is opened so a previous attempt does not linger.
 function openDialog() {
   deckName.value = ''
   deckFormat.value = 'Standard'
@@ -41,6 +44,7 @@ function closeDialog() {
   errorMessage.value = ''
 }
 
+// Submission flow: validate, authenticate, create the Firebase record, then navigate to it.
 async function handleCreateDeck() {
   errorMessage.value = ''
 
