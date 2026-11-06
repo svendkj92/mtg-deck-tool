@@ -5,8 +5,11 @@ import { loadDecks, saveDeck, getCardArtCrop } from '../services/deckService'
 import { useRoute } from 'vue-router'
 import ManaCost from '../components/ManaCost.vue'
 
+// Route context: the deck ID in the URL determines which saved deck is loaded.
 const route = useRoute()
 
+// Authentication state and anonymous sign-in
+// The Firebase UID is used to read and save this user's decks.
 //Anonymt login
 const userId = ref('')
 const authError = ref('')
@@ -23,6 +26,7 @@ async function loginAnonymously() {
   }
 }
 
+// Persistence: serialize the editor state and save it to Firebase.
 async function saveActiveDeck() {
   try {
     if (!userId.value) {
@@ -66,6 +70,7 @@ function selectDeck(savedDeck) {
   isLoadingDeck = false
 }
 
+// Editor state: values shared by the search UI, deck display, and save workflow.
 // Reaktiv state
 const deck = ref({
   mainboard: [],
@@ -83,6 +88,7 @@ const searchMenuOpen = ref(false)
 const loadError = ref('')
 
 
+// Card search: debounce is managed by the watcher below before this request runs.
 let searchTimeout = null
 // Hent kort fra Scryfall
 async function searchCards() {
@@ -154,6 +160,7 @@ watch(searchQuery, (newValue) => {
   }, 800)
 })
 
+// Deck actions: add a card to either the mainboard or sideboard.
 function addCard(card, targetBoard = 'mainboard', quantity = 1) {
   const board = deck.value[targetBoard]
 
@@ -191,6 +198,7 @@ function addCard(card, targetBoard = 'mainboard', quantity = 1) {
   }
 }
 
+// Card-face UI state: track flips and transitions independently for each card.
 const flippedCards = ref(new Set())
 const animatingCards = ref(new Set())
 
@@ -233,6 +241,7 @@ function changeQuantity(card, amount, targetBoard = 'mainboard') {
   }
 }
 
+// Display grouping: classify cards using their type line for the deck layout.
 function getCardTypeGroup(typeLine = '') {
   const types = typeLine.split(' — ')[0]
 
@@ -247,6 +256,7 @@ function getCardTypeGroup(typeLine = '') {
   return 'Other'
 }
 
+// Build the ordered mainboard groups and calculate the quantity total for each.
 const mainboardGroups = computed(() => {
   const groupOrder = [
     'Creatures',
@@ -310,6 +320,7 @@ const totalCards = computed(() =>
   )
 )
 
+// Format rules drive deck size validation and whether a sideboard is shown.
 const formatRules = {
   Standard: {
     mainboardMin: 60,
@@ -386,6 +397,7 @@ const sideboardIsValid = computed(() =>
   totalSideboardCards.value <= currentFormatRules.value.sideboardLimit
 )
 
+// Autosave: debounce changes to deck contents, name, or format.
 watch(
   [deck, deckName, deckFormat],
   () => {
@@ -408,6 +420,7 @@ watch(
   }
 )
 
+// Loading: retrieve the deck matching the current route after authentication.
 async function loadActiveDeck() {
   loadError.value = ''
 
@@ -441,6 +454,7 @@ async function loadActiveDeck() {
 
 
 
+// Banner artwork: use Scryfall's art crop for the first mainboard card.
 async function loadDeckBannerArt(card) {
   deckBannerArt.value = ''
 
