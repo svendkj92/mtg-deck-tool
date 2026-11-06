@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { loadManaSymbols } from '../services/manaSymbolsService'
 
+// The mana cost is passed in by the parent; this component converts it to symbol images.
 const props = defineProps({
   cost: {
     type: String,
@@ -11,6 +12,8 @@ const props = defineProps({
 
 const symbols = ref([])
 
+// Rebuild the rendered symbols whenever the input mana cost changes.
+// Scryfall uses `//` to separate faces on multi-faced cards.
 watch(
   () => props.cost,
   async (newCost) => {
@@ -56,6 +59,7 @@ watch(
 )
 </script>
 
+<!-- Render symbol images inline, with a slash between multi-faced card costs. -->
 <template>
   <span class="mana-cost">
     <template v-for="(symbol, index) in symbols" :key="index">
@@ -74,6 +78,7 @@ watch(
 </template>
 
 <style scoped lang="scss">
+// Keep mana icons aligned with surrounding text while preserving a compact inline layout.
 .mana-cost {
   display: inline-flex;
   align-items: center;
