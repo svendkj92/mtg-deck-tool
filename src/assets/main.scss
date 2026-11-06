@@ -1,29 +1,39 @@
-@import './base.css';
+@use './variables' as *;
 
-// Globale designværdier
-$color-bg: #111318;
-$color-surface: #1c1e25;
-$color-input: #202229;
-$color-border: #30323a;
-$color-text: #f4f4f5;
-$color-muted: #a1a1aa;
-$color-accent: #ffa81b;
-$color-error: #ff9292;
-
-// Globale grundregler
-* {
+// Global reset and shared page defaults.
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 html {
   min-width: 320px;
+  background: $color-bg;
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  font-family: Arial, sans-serif;
+  margin: 0;
+  background: $color-bg;
+  color: $color-text;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -31,6 +41,10 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+img {
+  max-width: 100%;
 }
 
 #app {
