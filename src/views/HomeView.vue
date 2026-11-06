@@ -41,7 +41,7 @@ const editError = ref('')
 const savingEdit = ref(false)
 
 // Artwork enrichment: attach a cover image to each saved deck for the collection cards.
-// Tilføjer coverUrl til hvert deck.
+// Adds a coverUrl to each deck.
 async function addDeckCovers(decks) {
   return Promise.all(
     decks.map(async (deck) => {
@@ -64,13 +64,13 @@ async function addDeckCovers(decks) {
   )
 }
 
-// Henter decks fra Firebase og tilføjer artwork.
+// Loads decks from Firebase and adds artwork.
 async function refreshDecks() {
   const decks = await loadDecks(userId.value)
   savedDecks.value = await addDeckCovers(decks)
 }
 
-// Åbner edit-dialogen med det valgte decks oplysninger.
+// Opens the edit dialog with the selected deck's details.
 function openEditDialog(deck) {
   editingDeck.value = deck
   editDeckName.value = deck.name
@@ -80,7 +80,7 @@ function openEditDialog(deck) {
   editDialog.value = true
 }
 
-// Lukker edit-dialogen.
+// Closes the edit dialog.
 function closeEditDialog() {
   editDialog.value = false
   editingDeck.value = null
@@ -88,7 +88,7 @@ function closeEditDialog() {
 }
 
 // Edit workflow: validate the form, persist the updated metadata, then refresh local UI state.
-// Gemmer ændringer til et eksisterende deck.
+// Saves changes to an existing deck.
 async function saveDeckChanges() {
   editError.value = ''
 
@@ -116,7 +116,7 @@ async function saveDeckChanges() {
       deckData
     )
 
-    // Opdaterer den lokale liste efter succesfuld lagring.
+    // Updates the local list after a successful save.
     editingDeck.value.name = deckData.name
     editingDeck.value.format = deckData.format
 
@@ -131,7 +131,7 @@ async function saveDeckChanges() {
 }
 
 // Authentication and initial collection loading.
-// Logger brugeren ind og henter decks.
+// Signs the user in and loads the decks.
 async function loginAnonymously() {
   authError.value = ''
 
@@ -147,7 +147,7 @@ async function loginAnonymously() {
 }
 
 // Delete workflow: confirm with the user before removing the deck from Firebase and the local list.
-// Sletter et deck.
+// Deletes a deck.
 async function removeDeck(deck) {
   const confirmed = window.confirm(
     `Are you sure you want to delete "${deck.name}"?`
@@ -189,7 +189,7 @@ function getDeckColors(deck) {
 }
 
 // Navigation: open the editor route for the selected deck.
-// Navigerer til deck-editoren.
+// Navigates to the deck editor.
 async function openDeck(deckId) {
   console.log('1. Clicked deck:', deckId)
 
