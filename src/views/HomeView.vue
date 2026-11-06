@@ -433,10 +433,12 @@ onMounted(() => {
 <style lang="scss" scoped>
 @use "@/assets/variables" as *;
 
+// The dashboard starts with a single-column layout for narrow screens.
 .dashboard {
-  width: min(1400px, 94%);
+  width: calc(100% - 2rem);
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 3rem 0;
+  padding: 1.5rem 0 2.5rem;
 }
 
 .dashboard-section {
@@ -444,94 +446,72 @@ onMounted(() => {
 }
 
 .section-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 600;
   }
 }
 
-// Deck grid
+// Cards expand into additional columns as the available width increases.
 .deck-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1rem;
 }
 
-// Deck cards
 .deck-card {
   display: flex;
-  overflow: hidden;
-  border-radius: 12px;
-  background: #1c1e25;
-
-  aspect-ratio: 16 / 9;
-  min-height: unset;
+  min-width: 0;
   height: auto;
-
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid $color-border;
+  border-radius: 12px;
+  background: $color-surface;
   cursor: pointer;
-
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow:
-      0 0 0 1px rgba($color-accent, 0.7),
-      0 8px 24px rgba($color-accent, 0.2);
-  }
-
-  // Mana Symbols
-  .deck-card__mana-symbols {
-  position: absolute;
-  top: 1.25rem;
-  left: 1.25rem;
-  z-index: 2;
-
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-
-  img {
-    width: 24px;
-    height: 24px;
-
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
-  }
-}
-
-  // Artwork
   &__art {
     position: relative;
     display: flex;
     flex: 1;
     align-items: flex-end;
-
     width: 100%;
-    height: 100%;
-    min-height: unset;
-    padding: 1.25rem;
-
+    min-width: 0;
+    min-height: 0;
+    padding: 1rem;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 
     &--empty {
-      background: linear-gradient(
-        135deg,
-        #292d38,
-        #17191f
-      );
+      background: linear-gradient(135deg, #292d38, #17191f);
     }
   }
 
-  // Gradient overlay
+  &__mana-symbols {
+    position: absolute;
+    top: 0.85rem;
+    left: 0.85rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+
+    img {
+      width: clamp(18px, 4vw, 24px);
+      height: clamp(18px, 4vw, 24px);
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+    }
+  }
+
   &__overlay {
     position: absolute;
     inset: 0;
-
     background: linear-gradient(
       to top,
       rgba(0, 0, 0, 0.95) 0%,
@@ -541,85 +521,106 @@ onMounted(() => {
     );
   }
 
-  // Deck name and format
   &__info {
     position: relative;
     z-index: 1;
+    min-width: 0;
     color: white;
 
     h3 {
       margin-top: 0.35rem;
-      font-size: 1.3rem;
+      font-size: clamp(1rem, 3vw, 1.3rem);
       font-weight: 600;
       line-height: 1.2;
+      overflow-wrap: anywhere;
     }
   }
 
   &__format {
     color: $color-accent;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
 
-  // Edit and delete buttons
   &__actions {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
+    top: 0.35rem;
+    right: 0.35rem;
     z-index: 2;
-
     display: flex;
-    gap: 0.25rem;
-
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  &:hover &__actions {
+    gap: 0.15rem;
     opacity: 1;
+    transition: opacity 0.2s ease;
   }
 }
 
-// Empty and loading states
 .empty-state,
 .loading-state {
   padding: 2rem 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: $color-muted;
 }
 
-// Edit dialog
+// Dialogs stay within the viewport on narrow screens.
 .edit-dialog {
-  border: 1px solid #30323a;
+  width: min(450px, calc(100vw - 2rem));
+  border: 1px solid $color-border;
   border-radius: 12px;
-  background: #1c1e25;
+  background: $color-surface;
 
   &__actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 1rem;
   }
 }
 
-// Mobile
-@media (max-width: 600px) {
-  .deck-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+@media (min-width: 600px) {
+  .dashboard {
+    padding-top: 2rem;
   }
 
-  .deck-card {
-    &__art {
-      padding: 0.85rem;
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .deck-grid {
+    gap: 1.25rem;
+  }
+
+  .deck-card__art {
+    padding: 1.1rem;
+  }
+}
+
+@media (min-width: 960px) {
+  .dashboard {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .deck-grid {
+    gap: 1.5rem;
+  }
+
+  // Hover effects are only enabled where hover is a reliable input method.
+  @media (hover: hover) and (pointer: fine) {
+    .deck-card:hover {
+      transform: translateY(-5px);
+      box-shadow:
+        0 0 0 1px rgba($color-accent, 0.7),
+        0 8px 24px rgba($color-accent, 0.2);
     }
 
-    &__info h3 {
-      font-size: 1.05rem;
+    .deck-card__actions {
+      opacity: 0;
     }
 
-    &__actions {
+    .deck-card:hover .deck-card__actions,
+    .deck-card:focus-within .deck-card__actions {
       opacity: 1;
     }
   }
