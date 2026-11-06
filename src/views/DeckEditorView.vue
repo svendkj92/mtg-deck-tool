@@ -813,7 +813,7 @@ watch(
 @use "@/assets/variables" as *;
 
 // ==========================================
-// 1. Variabler
+// 1. Variables
 // Collects colors and values used in multiple places.
 // Makes it easier to change the design's core elements.
 // ==========================================
@@ -827,7 +827,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 2. Globale styles
+// 2. Global styles
 // Ensures consistent sizing calculations for elements
 // and removes the browser's default body margin.
 // ==========================================
@@ -843,7 +843,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 3. Appens overordnede layout
+// 3. Overall app layout
 // Limits the content's maximum width and centers it
 // on the page. Adds spacing around the content.
 // ==========================================
@@ -856,7 +856,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 4. Sidens header
+// 4. Page header
 // Styles the page heading and its descriptive text.
 // ==========================================
 
@@ -965,7 +965,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 5. Søgeresultater
+// 5. Search results
 // Arranges search results vertically with spacing between them.
 // Adjusts the Vuetify cards' borders and backgrounds.
 // ==========================================
@@ -992,7 +992,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 6. Mainboard og sideboard
+// 6. Mainboard and sideboard
 // Styles the main sections and their headings
 // as well as the text shown when a deck is empty.
 // ==========================================
@@ -1062,7 +1062,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 7. Kort-grid
+// 7. Card grid
 // Arranges the cards in a responsive grid.
 // Each card gets its own space in the grid.
 // ==========================================
@@ -1084,7 +1084,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 8. Kortbilleder
+// 8. Card images
 // Ensures card images are displayed correctly
 // and creates a positioning context for overlays.
 // ==========================================
@@ -1114,7 +1114,7 @@ $radius: 12px;
 }
 
 // ==========================================
-// 9. Antal-chip og quantity controls
+// 9. Quantity chip and quantity controls
 // Positions the card quantity and plus/minus buttons
 // on top of the card image.
 // ==========================================
@@ -1246,7 +1246,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 10. Ellipsemenu
+// 10. Ellipsis menu
 // Positions the menu button at the card's top-right corner.
 // ==========================================
 
@@ -1266,7 +1266,7 @@ $radius: 12px;
 
 
 // ==========================================
-// 11. Responsivt design
+// 11. Responsive design
 // Adapts the grid, spacing, and buttons for smaller screens.
 // ==========================================
 
