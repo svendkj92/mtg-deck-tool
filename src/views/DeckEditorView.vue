@@ -256,6 +256,20 @@ function getCardTypeGroup(typeLine = '') {
   return 'Other'
 }
 
+// Sort cards by mana value, using card name as a secondary sort.
+function sortCardsByManaValue(cards) {
+  return [...cards].sort((a, b) => {
+    const manaValueDifference =
+      Number(a.manaValue ?? 0) - Number(b.manaValue ?? 0)
+
+    if (manaValueDifference !== 0) {
+      return manaValueDifference
+    }
+
+    return a.name.localeCompare(b.name)
+  })
+}
+
 // Build the ordered mainboard groups and calculate the quantity total for each.
 const mainboardGroups = computed(() => {
   const groupOrder = [
@@ -285,7 +299,7 @@ const mainboardGroups = computed(() => {
     .filter(groupName => groups[groupName]?.length)
     .map(groupName => ({
       name: groupName,
-      cards: groups[groupName],
+      cards: sortCardsByManaValue(groups[groupName]),
       total: groups[groupName].reduce(
         (sum, card) => sum + card.quantity,
         0
@@ -936,7 +950,7 @@ $radius: 12px;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin: 1rem;
   padding: 0 0 0.75rem;
   border-bottom: 1px solid $color-border;
 
@@ -1205,7 +1219,7 @@ $radius: 12px;
   }
 
   .deck-header {
-    margin-bottom: 1.5rem;
+    margin: 1rem;
 
     h2 {
       font-size: 1.5rem;
