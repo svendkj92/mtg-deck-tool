@@ -2,6 +2,8 @@ import { initializeApp } from 'firebase/app'
 import { getDatabase } from 'firebase/database'
 import { getAuth } from 'firebase/auth'
 
+// Firebase project configuration used to initialize Authentication and Realtime Database.
+// Keep this object aligned with the project's Firebase app settings.
 const firebaseConfig = {
   apiKey: "AIzaSyDAKC2bqcMR4w8pyhMlKNH_yJRPw6l6m7I",
   authDomain: "mtg-deck-tool.firebaseapp.com",
@@ -12,6 +14,7 @@ const firebaseConfig = {
   appId: "1:908190754113:web:82d9dd4379d0853ac1adc0"
 };
 
+// Initialize the Firebase app once, then export the services used by the application.
 const app = initializeApp(firebaseConfig)
 
 export const db = getDatabase(app)
