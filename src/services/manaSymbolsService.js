@@ -1,5 +1,8 @@
+// Cache the in-flight request (and its resolved promise) so components share one
+// Scryfall symbology request rather than fetching it independently.
 let manaSymbolsPromise = null
 
+// Fetch Scryfall's symbol catalog on first use; subsequent calls reuse the cached promise.
 export function loadManaSymbols() {
   if (!manaSymbolsPromise) {
     manaSymbolsPromise = fetch(
