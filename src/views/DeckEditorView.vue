@@ -291,7 +291,7 @@ const deckDisplayGroups = computed(() => {
   }))
 
   // Tilføj Sideboard som én samlet gruppe
-  if (currentFormatRules.value.sideboardEnabled) {
+  if (currentFormatRules.value.sideboardEnabled && deck.value.sideboard.length > 0) {
     groups.push({
       name: 'Sideboard',
       cards: deck.value.sideboard,
@@ -642,7 +642,7 @@ watch(
     <v-card class="deck-section" variant="flat">
       <!-- Overordnet Mainboard-header -->
       <v-card-title class="deck-header">
-        <h2>Mainboard</h2>
+        <h2>Deck</h2>
 
         <v-chip
           :color="mainboardIsValid ? 'primary' : 'error'"
@@ -660,6 +660,7 @@ watch(
         </p>
 
         <!-- Alle grupper -->
+      <div class="deck-groups"> 
         <div
           v-for="group in deckDisplayGroups"
           :key="group.name"
@@ -786,15 +787,8 @@ watch(
               </div>
             </div>
           </div>
-
-          <!-- Tom Sideboard-gruppe -->
-          <p
-            v-else-if="group.targetBoard === 'sideboard'"
-            class="empty-deck"
-          >
-            Your sideboard is empty. Add cards to get started!
-          </p>
         </div>
+      </div>   
       </v-card-text>
     </v-card>
 
@@ -1009,12 +1003,17 @@ $radius: 12px;
   }
 }
 
-.deck-group {
-  margin-top: 2rem;
+.deck-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem 1.5rem;
+  align-items: start;
+}
 
-  &:first-of-type {
-    margin-top: 0;
-  }
+.deck-group {
+  flex: 1 1 max-content;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .deck-group-header {
