@@ -1,6 +1,7 @@
 import { ref, get, set, remove, push } from 'firebase/database'
 import { db } from './firebase'
 
+// Create a new deck under the authenticated user's collection and return its generated ID.
 export async function createDeck(uid, name, format) {
   const decksRef = ref(db, `users/${uid}/decks`)
   const newDeckRef = push(decksRef)
@@ -18,6 +19,8 @@ export async function createDeck(uid, name, format) {
   return newDeckRef.key
 }
 
+// Read all decks for a user. Normalize board values because Firebase may return arrays
+// as keyed objects after serialization, while the Vue UI expects arrays.
 export async function loadDecks(uid) {
   const decksRef = ref(db, `users/${uid}/decks`)
 
@@ -41,6 +44,8 @@ export async function loadDecks(uid) {
   }))
 }
 
+// Replace the stored deck data. The database key is the deck ID, so omit any `id`
+// property from the object written to the record.
 export async function saveDeck(uid, deckId, deck) {
   const deckRef = ref(db, `users/${uid}/decks/${deckId}`)
 
@@ -49,6 +54,7 @@ export async function saveDeck(uid, deckId, deck) {
   await set(deckRef, deckData)
 }
 
+// Remove a deck record from the user's Firebase collection.
 export async function deleteDeck(uid, deckId) {
   const deckRef = ref(db, `users/${uid}/decks/${deckId}`)
 
@@ -56,6 +62,7 @@ export async function deleteDeck(uid, deckId) {
 }
 
 
+// Artwork helper used for deck banners and collection covers.
 /**
  * Fetches the art_crop image for a Scryfall card.
  * Supports both regular and double-faced cards.
