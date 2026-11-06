@@ -812,194 +812,123 @@ watch(
 <style lang="scss" scoped>
 @use "@/assets/variables" as *;
 
-// ==========================================
-// 1. Variables
-// Collects colors and values used in multiple places.
-// Makes it easier to change the design's core elements.
-// ==========================================
-
-$color-surface: #1c1e25;
-$color-muted: #a1a1aa;
-$color-border: #30323a;
-$color-error: #ff9292;
-
 $radius: 12px;
 
-
-// ==========================================
-// 2. Global styles
-// Ensures consistent sizing calculations for elements
-// and removes the browser's default body margin.
-// ==========================================
-
-:global(*) {
-  box-sizing: border-box;
-}
-
-:global(body) {
-  margin: 0;
-  font-family: Arial, sans-serif;
-}
-
-
-// ==========================================
-// 3. Overall app layout
-// Limits the content's maximum width and centers it
-// on the page. Adds spacing around the content.
-// ==========================================
-
+// Page layout
 .app {
   width: 100%;
-  margin: 0;
-  padding: 0 0 3rem;
+  padding-bottom: 2rem;
 }
 
-
-// ==========================================
-// 4. Page header
-// Styles the page heading and its descriptive text.
-// ==========================================
-
+// Deck banner
 .deck-banner {
   position: relative;
   display: flex;
   align-items: flex-end;
-
   width: 100%;
-  min-height: 340px;
-  padding: 3rem;
-
+  min-height: 210px;
+  padding: 1.25rem;
   overflow: hidden;
   isolation: isolate;
+  border-radius: 0;
+  background: $color-surface;
 
-  border-radius: $radius;
-  background: #1c1e25;
-
-  // Positions the artwork on the right side.
   &__art {
     position: absolute;
     inset: 0 0 0 auto;
     z-index: -2;
-
-    width: 70%;
+    width: 100%;
     height: 100%;
-
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
   }
 
-  // Gradient that blends the left background with the artwork.
   &__overlay {
     position: absolute;
     inset: 0;
     z-index: -1;
-
     background: linear-gradient(
       to right,
-      #1c1e25 0%,
-      #1c1e25 25%,
-      rgba(28, 30, 37, 0.95) 40%,
-      rgba(28, 30, 37, 0.65) 55%,
-      rgba(28, 30, 37, 0.15) 75%,
-      transparent 100%
+      $color-surface 0%,
+      rgba(28, 30, 37, 0.92) 30%,
+      rgba(28, 30, 37, 0.55) 65%,
+      rgba(28, 30, 37, 0.12) 100%
     );
   }
 
-  // Hide the artwork and gradient when the deck is empty.
   &--empty {
-    background: linear-gradient(
-      135deg,
-      #292d38,
-      #17191f
-    );
+    background: linear-gradient(135deg, #292d38, #17191f);
   }
 
   &__info {
     position: relative;
     z-index: 1;
-
+    max-width: 100%;
     color: white;
 
     h1 {
       margin-top: 0.35rem;
-      font-size: 2.2rem;
+      font-size: clamp(1.45rem, 5vw, 2.2rem);
       font-weight: 600;
       line-height: 1.2;
+      overflow-wrap: anywhere;
     }
   }
 
   &__format {
     color: $color-accent;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
 }
 
-@media (max-width: 600px) {
-  .deck-banner {
-    min-height: 240px;
-    padding: 1.5rem;
-
-    &__art {
-      width: 85%;
-    }
-
-    &__overlay {
-      background: linear-gradient(
-        to right,
-        #1c1e25 0%,
-        rgba(28, 30, 37, 0.95) 35%,
-        rgba(28, 30, 37, 0.6) 65%,
-        rgba(28, 30, 37, 0.15) 100%
-      );
-    }
-
-    &__info h1 {
-      font-size: 1.6rem;
-    }
-  }
+// Search
+.deck-editor-content,
+.deck-section {
+  width: calc(100% - 2rem);
+  max-width: 1200px;
+  margin-right: auto;
+  margin-left: auto;
 }
 
-
-// ==========================================
-// 5. Search results
-// Arranges search results vertically with spacing between them.
-// Adjusts the Vuetify cards' borders and backgrounds.
-// ==========================================
+.deck-editor-content {
+  margin-top: 1.25rem;
+}
 
 .search-results {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-left: 3%;
-  margin-right: 3%;
-  max-height: 60vh;
+  width: 100%;
+  max-height: 60dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .search-result {
   border-color: $color-border;
   background: $color-surface;
+
+  :deep(.v-card-text) {
+    padding: 0.75rem;
+  }
+
+  :deep(.v-row) {
+    row-gap: 0.5rem;
+  }
+
+  :deep(.v-col) {
+    min-width: 0;
+  }
 }
 
-.deck-editor-content {
-  width: min(1200px, 94%);
-  margin: 2rem auto 0;
-}
-
-
-// ==========================================
-// 6. Mainboard and sideboard
-// Styles the main sections and their headings
-// as well as the text shown when a deck is empty.
-// ==========================================
-
+// Mainboard and sideboard
 .deck-section {
-  width: min(1200px, 94%);
-  margin: 3rem auto 0;
+  margin-top: 2rem;
+  padding: 0;
 }
 
 .deck-header {
@@ -1007,13 +936,13 @@ $radius: 12px;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  padding: 0 0 0.75rem;
   border-bottom: 1px solid $color-border;
 
   h2 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
 }
 
@@ -1021,7 +950,7 @@ $radius: 12px;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 2rem 4rem;
+  gap: 1.5rem;
 }
 
 .deck-group {
@@ -1034,60 +963,43 @@ $radius: 12px;
 .deck-group-header {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.6rem;
   border-bottom: 1px solid $color-border;
 
   h3 {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
   }
 }
 
-// Highlights invalid card counts with an error color.
 .count-invalid {
   color: $color-error !important;
 }
 
-// Centers the message when a deck contains no cards.
 .empty-deck {
-  padding: 2rem 1rem;
+  padding: 1.5rem 0.75rem;
   color: $color-muted;
   text-align: center;
 }
 
-
-// ==========================================
-// 7. Card grid
-// Arranges the cards in a responsive grid.
-// Each card gets its own space in the grid.
-// ==========================================
-
+// Card layout
 .deck-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.65rem;
 }
 
 .deck-item {
-  width: clamp(130px, 11vw, 180px);
+  width: clamp(100px, 27vw, 148px);
   flex: 0 0 auto;
 }
 
 .deck-card {
   min-width: 0;
 }
-
-
-// ==========================================
-// 8. Card images
-// Ensures card images are displayed correctly
-// and creates a positioning context for overlays.
-// ==========================================
 
 .deck-card-image {
   position: relative;
@@ -1097,43 +1009,15 @@ $radius: 12px;
     transform 0.2s ease,
     filter 0.2s ease;
 
-  &:hover {
-    transform: translateY(-4px);
-    filter: drop-shadow(0 0 8px rgba($color-accent, 0.5));
-  }  
-    
   img {
     display: block;
     width: 100%;
     height: auto;
     border-radius: 5.5%;
-    transition:
-      transform 0.2s ease,
-      filter 0.2s ease;    
   }
 }
 
-// ==========================================
-// 9. Quantity chip and quantity controls
-// Positions the card quantity and plus/minus buttons
-// on top of the card image.
-// ==========================================
-
-.card-quantity-overlay {
-  position: absolute;
-  top: 12%;
-  left: 8.5%;
-  z-index: 2;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-// ==========================================
-// Correct display of flipped cards.
-// ==========================================
+// Card-face flip
 .card-flip-trigger {
   position: absolute;
   top: 35%;
@@ -1179,13 +1063,13 @@ $radius: 12px;
   }
 }
 
+// Card controls
 .card-controls {
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
 
-  // Ensures the individual controls remain clickable.
   > * {
     pointer-events: auto;
   }
@@ -1204,7 +1088,17 @@ $radius: 12px;
   transform: scale(0.95);
 }
 
-// Adjusts the Vuetify chip that displays the copy count.
+.card-quantity-overlay {
+  position: absolute;
+  top: 8%;
+  left: 7%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .card-quantity-badge {
   width: 32px;
   min-width: 32px;
@@ -1213,106 +1107,146 @@ $radius: 12px;
   border-radius: 8px !important;
 }
 
-// Arranges the plus/minus buttons vertically.
-// The buttons are hidden by default.
 .quantity-controls--overlay {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-
-  opacity: 0;
-  pointer-events: none;
+  gap: 0.3rem;
+  opacity: 1;
+  pointer-events: auto;
   transition: opacity 0.15s ease;
 }
 
-// Shows the buttons when the user hovers over the card
-// or navigates to them using the keyboard.
-.deck-card-image:hover .quantity-controls--overlay,
-.deck-card-image:focus-within .quantity-controls--overlay {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-// Shared appearance and size for the plus/minus buttons.
 .quantity-button {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
   border-radius: 8px !important;
-
   background: rgba(17, 19, 24, 0.92);
   color: white;
 }
-
-
-// ==========================================
-// 10. Ellipsis menu
-// Positions the menu button at the card's top-right corner.
-// ==========================================
 
 .card-menu-trigger {
   position: absolute !important;
-  top: 12%;
-  right: 8%;
+  top: 8%;
+  right: 7%;
   z-index: 2;
-
-  width: 22px !important;
-  height: 32px !important;
+  width: 30px !important;
+  height: 30px !important;
   border-radius: 8px !important;
-
   background: rgba(17, 19, 24, 0.92);
   color: white;
 }
 
+// Larger screens progressively add space and increase card size.
+@media (min-width: 600px) {
+  .deck-banner {
+    min-height: 270px;
+    padding: 2rem;
+    border-radius: $radius;
 
-// ==========================================
-// 11. Responsive design
-// Adapts the grid, spacing, and buttons for smaller screens.
-// ==========================================
+    &__art {
+      width: 82%;
+    }
 
-@media (max-width: 480px) {
-  .app {
-    padding: 2rem 0;
+    &__overlay {
+      background: linear-gradient(
+        to right,
+        $color-surface 0%,
+        $color-surface 20%,
+        rgba(28, 30, 37, 0.9) 38%,
+        rgba(28, 30, 37, 0.55) 60%,
+        rgba(28, 30, 37, 0.1) 100%
+      );
+    }
   }
 
-  .page-header h1 {
-    font-size: 2rem;
+  .deck-editor-content {
+    margin-top: 1.75rem;
   }
 
   .deck-section {
-    padding: 1rem;
+    margin-top: 2.5rem;
   }
 
-  // Displays two cards per row on small screens.
+  .deck-groups {
+    gap: 2rem;
+  }
+
   .deck-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
+    gap: 0.85rem;
   }
 
-  // Makes the quantity chip and buttons slightly smaller.
-  .card-quantity-badge {
-    width: 28px;
-    min-width: 28px;
-  }
-
-  .quantity-button {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
+  .deck-item {
+    width: clamp(120px, 19vw, 165px);
   }
 }
 
+@media (min-width: 960px) {
+  .app {
+    padding-bottom: 3rem;
+  }
 
-// Touch devices:
-// Always displays the plus/minus buttons because hover
-// does not work the same way as on a computer.
+  .deck-banner {
+    min-height: 340px;
+    padding: 3rem;
+  }
 
-@media (hover: none) {
-  .quantity-controls--overlay {
-    opacity: 1;
-    pointer-events: auto;
+  .deck-editor-content,
+  .deck-section {
+    width: min(1200px, calc(100% - 3rem));
+  }
+
+  .deck-editor-content {
+    margin-top: 2rem;
+  }
+
+  .deck-section {
+    margin-top: 3rem;
+  }
+
+  .deck-header {
+    margin-bottom: 1.5rem;
+
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+
+  .deck-group-header {
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+
+    h3 {
+      font-size: 1.1rem;
+    }
+  }
+
+  .deck-grid {
+    gap: 1rem;
+  }
+
+  .deck-item {
+    width: clamp(140px, 11vw, 180px);
+  }
+
+  // Hover-only enhancements are reserved for devices with a mouse or trackpad.
+  @media (hover: hover) and (pointer: fine) {
+    .deck-card-image:hover {
+      transform: translateY(-4px);
+      filter: drop-shadow(0 0 8px rgba($color-accent, 0.5));
+    }
+
+    .quantity-controls--overlay {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .deck-card-image:hover .quantity-controls--overlay,
+    .deck-card-image:focus-within .quantity-controls--overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
-
 </style>
-
