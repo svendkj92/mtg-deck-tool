@@ -233,6 +233,56 @@ function changeQuantity(card, amount, targetBoard = 'mainboard') {
   }
 }
 
+function getCardTypeGroup(typeLine = '') {
+  const types = typeLine.split(' — ')[0]
+
+  if (types.includes('Creature')) return 'Creatures'
+  if (types.includes('Planeswalker')) return 'Planeswalkers'
+  if (types.includes('Artifact')) return 'Artifacts'
+  if (types.includes('Enchantment')) return 'Enchantments'
+  if (types.includes('Instant')) return 'Instants'
+  if (types.includes('Sorcery')) return 'Sorceries'
+  if (types.includes('Land')) return 'Lands'
+
+  return 'Other'
+}
+
+const mainboardGroups = computed(() => {
+  const groupOrder = [
+    'Creatures',
+    'Planeswalkers',
+    'Artifacts',
+    'Enchantments',
+    'Instants',
+    'Sorceries',
+    'Lands',
+    'Other'
+  ]
+
+  const groups = {}
+
+  deck.value.mainboard.forEach(card => {
+    const groupName = getCardTypeGroup(card.typeLine)
+
+    if (!groups[groupName]) {
+      groups[groupName] = []
+    }
+
+    groups[groupName].push(card)
+  })
+
+  return groupOrder
+    .filter(groupName => groups[groupName]?.length)
+    .map(groupName => ({
+      name: groupName,
+      cards: groups[groupName],
+      total: groups[groupName].reduce(
+        (sum, card) => sum + card.quantity,
+        0
+      )
+    }))
+})
+
 const totalCards = computed(() =>
   deck.value.mainboard.reduce(
     (total, card) => total + card.quantity,
