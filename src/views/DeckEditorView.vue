@@ -1006,20 +1006,20 @@ $radius: 12px;
 .deck-groups {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem 1.5rem;
-  align-items: start;
+  align-items: flex-start;
+  gap: 2rem 4rem;
 }
 
 .deck-group {
-  flex: 1 1 max-content;
+  flex: 0 1 auto;
+  width: fit-content;
   max-width: 100%;
   min-width: 0;
 }
 
 .deck-group-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
 
   margin-bottom: 1rem;
@@ -1054,9 +1054,14 @@ $radius: 12px;
 // ==========================================
 
 .deck-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 180px));
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
+}
+
+.deck-item {
+  width: clamp(130px, 11vw, 180px);
+  flex: 0 0 auto;
 }
 
 .deck-card {
