@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import CreateDeckDialog from './components/CreateDeckDialog.vue'
 
 // The drawer is controlled on smaller screens and remains visible on desktop.
-const drawer = ref(false)
+const drawer = ref(null)
 </script>
 
 <template>

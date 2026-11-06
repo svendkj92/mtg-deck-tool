@@ -464,6 +464,7 @@ onMounted(() => {
 .deck-card {
   display: flex;
   min-width: 0;
+  max-width: 400px;
   height: auto;
   overflow: hidden;
   aspect-ratio: 16 / 9;
