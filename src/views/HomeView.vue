@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'vue-router'
 import { getCurrentUser } from '../services/authService'
 
+// Router and collection state used by the dashboard.
 const router = useRouter()
 
 const userId = ref('')
@@ -27,6 +28,7 @@ const formats = [
   'Commander'
 ]
 
+// Dialog state and form values for creating/editing decks.
 // Edit dialog
 const createDialog = ref(false)
 const editDialog = ref(false)
@@ -38,6 +40,7 @@ const editDeckFormat = ref('Standard')
 const editError = ref('')
 const savingEdit = ref(false)
 
+// Artwork enrichment: attach a cover image to each saved deck for the collection cards.
 // Tilføjer coverUrl til hvert deck.
 async function addDeckCovers(decks) {
   return Promise.all(
@@ -84,6 +87,7 @@ function closeEditDialog() {
   editError.value = ''
 }
 
+// Edit workflow: validate the form, persist the updated metadata, then refresh local UI state.
 // Gemmer ændringer til et eksisterende deck.
 async function saveDeckChanges() {
   editError.value = ''
@@ -126,6 +130,7 @@ async function saveDeckChanges() {
   }
 }
 
+// Authentication and initial collection loading.
 // Logger brugeren ind og henter decks.
 async function loginAnonymously() {
   authError.value = ''
@@ -141,6 +146,7 @@ async function loginAnonymously() {
   }
 }
 
+// Delete workflow: confirm with the user before removing the deck from Firebase and the local list.
 // Sletter et deck.
 async function removeDeck(deck) {
   const confirmed = window.confirm(
@@ -162,6 +168,7 @@ async function removeDeck(deck) {
   }
 }
 
+// Color display order follows the standard WUBRG sequence.
 const manaColorOrder = ['W', 'U', 'B', 'R', 'G']
 
 function getDeckColors(deck) {
@@ -181,6 +188,7 @@ function getDeckColors(deck) {
   return manaColorOrder.filter(color => colors.has(color))
 }
 
+// Navigation: open the editor route for the selected deck.
 // Navigerer til deck-editoren.
 async function openDeck(deckId) {
   console.log('1. Clicked deck:', deckId)
@@ -196,6 +204,7 @@ async function openDeck(deckId) {
   }
 }
 
+// Authenticate and populate the deck collection when the dashboard mounts.
 onMounted(() => {
   loginAnonymously()
 })
