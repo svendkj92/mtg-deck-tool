@@ -578,24 +578,26 @@ watch(
               variant="outlined"
             >
               <v-card-text>
-                <v-row align="center">
+                <v-row class="search-result-layout" align="center">
                   <!-- Card information -->
-                  <v-col>
-                    <div class="text-subtitle-1 font-weight-bold">
-                      {{ card.name }}
-                    </div>
+                  <v-col cols="12" sm>
+                    <div class="search-result-info">
+                      <div class="search-result-name text-subtitle-1 font-weight-bold">
+                        {{ card.name }}
+                      </div>
 
-                    <div class="text-body-2 text-medium-emphasis">
-                      {{ card.type_line }}
-                    </div>
+                      <div class="search-result-type text-body-2 text-medium-emphasis">
+                        {{ card.type_line }}
+                      </div>
 
-                    <div class="text-caption text-medium-emphasis">
-                      <ManaCost :cost="card.mana_cost" />
+                      <div class="text-caption text-medium-emphasis">
+                        <ManaCost :cost="card.mana_cost" />
+                      </div>
                     </div>
                   </v-col>
 
                   <!-- Mainboard buttons -->
-                  <v-col cols="auto">
+                  <v-col cols="12" sm="auto" class="search-result-actions">
                     <div class="text-caption text-medium-emphasis mb-1">
                       Mainboard
                     </div>
@@ -622,7 +624,9 @@ watch(
                   <!-- Sideboard buttons -->
                   <v-col
                     v-if="currentFormatRules.sideboardEnabled"
-                    cols="auto"
+                    cols="12"
+                    sm="auto"
+                    class="search-result-actions"
                   >
                     <div class="text-caption text-medium-emphasis mb-1">
                       Sideboard
@@ -936,6 +940,35 @@ $radius: 12px;
 
   :deep(.v-col) {
     min-width: 0;
+  }
+}
+
+.search-result-name {
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.search-result-type {
+  overflow-wrap: anywhere;
+}
+
+.search-result-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+@media (max-width: 599px) {
+  .search-result-layout {
+    align-items: flex-start;
+  }
+
+  .search-result-info {
+    width: 100%;
+  }
+
+  .search-result-actions {
+    padding-top: 0.25rem;
   }
 }
 
