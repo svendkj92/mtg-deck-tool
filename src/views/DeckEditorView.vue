@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { getCurrentUser } from '../services/authService'
+import { ref, computed, watch } from 'vue'
+import { useAuth } from '../composables/useAuth'
 import { loadDecks, saveDeck, getCardArtCrop } from '../services/deckService'
 import { useRoute } from 'vue-router'
 import ManaCost from '../components/ManaCost.vue'
@@ -8,23 +8,9 @@ import ManaCost from '../components/ManaCost.vue'
 // Route context: the deck ID in the URL determines which saved deck is loaded.
 const route = useRoute()
 
-// Authentication state and anonymous sign-in
-// The Firebase UID is used to read and save this user's decks.
-// Anonymous sign-in
-const userId = ref('')
-const authError = ref('')
-
-async function loginAnonymously() {
-  authError.value = ''
-
-  try {
-    const user = await getCurrentUser()
-    userId.value = user.uid
-  } catch (error) {
-    console.error('Login fejlede:', error)
-    authError.value = error.message
-  }
-}
+// The authenticated user's UID determines which decks can be loaded and saved.
+const { currentUser, authReady } = useAuth()
+const userId = computed(() => currentUser.value?.uid || '')
 
 // Persistence: serialize the editor state and save it to Firebase.
 async function saveActiveDeck() {
@@ -434,21 +420,27 @@ watch(
   }
 )
 
-// Loading: retrieve the deck matching the current route after authentication.
+// Loading: retrieve the requested deck once Firebase has resolved the auth state.
 async function loadActiveDeck() {
+  if (!authReady.value) return
+
   loadError.value = ''
 
+  if (!userId.value) {
+    activeDeckId.value = ''
+    deckName.value = ''
+    deckFormat.value = 'Standard'
+    deck.value = {
+      mainboard: [],
+      sideboard: []
+    }
+    deckBannerArt.value = ''
+    loadError.value = 'Please log in to edit this deck.'
+    return
+  }
+
   try {
-    if (!userId.value) {
-      await loginAnonymously()
-    }
-
-    if (!userId.value) {
-      throw new Error('Could not log in.')
-    }
-
     const decks = await loadDecks(userId.value)
-    console.log('Loaded decks:', decks)
 
     const matchingDeck = decks.find(
       savedDeck => savedDeck.id === route.params.id
@@ -462,7 +454,7 @@ async function loadActiveDeck() {
 
   } catch (error) {
     console.error('Could not load deck:', error)
-    loadError.value = error.message
+    loadError.value = error.message || 'Could not load this deck.'
   }
 }
 
@@ -495,7 +487,7 @@ watch(
 )
 
 watch(
-  () => route.params.id,
+  () => [route.params.id, userId.value, authReady.value],
   () => {
     loadActiveDeck()
   },
