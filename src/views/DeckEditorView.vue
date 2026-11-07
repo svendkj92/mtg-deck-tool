@@ -952,23 +952,34 @@ $radius: 12px;
   overflow-wrap: anywhere;
 }
 
+// Mobile is the default layout: card details and actions stack vertically.
+.search-result-layout {
+  align-items: flex-start;
+}
+
+.search-result-info {
+  width: 100%;
+}
+
 .search-result-actions {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  padding-top: 0.25rem;
 }
 
-@media (max-width: 599px) {
+// Larger screens progressively place details and actions on the same row.
+@media (min-width: 600px) {
   .search-result-layout {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .search-result-info {
-    width: 100%;
+    width: auto;
   }
 
   .search-result-actions {
-    padding-top: 0.25rem;
+    padding-top: 0;
   }
 }
 
