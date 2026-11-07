@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   loadDecks,
   deleteDeck,
@@ -13,7 +13,7 @@ import { useAuth } from '../composables/useAuth'
 // Router and collection state used by the dashboard.
 const router = useRouter()
 
-const { currentUser } = useAuth()
+const { currentUser, authReady } = useAuth()
 
 const userId = computed(() => currentUser.value?.uid || '')
 const savedDecks = ref([])
@@ -33,7 +33,6 @@ const formats = [
 
 // Dialog state and form values for creating/editing decks.
 // Edit dialog
-const createDialog = ref(false)
 const editDialog = ref(false)
 const editingDeck = ref(null)
 
@@ -166,7 +165,7 @@ async function removeDeck(deck) {
 
   } catch (error) {
     console.error('Could not delete deck:', error)
-    deckSaveError.value = error.message
+    loadError.value = 'Could not delete the deck.'
   }
 }
 
@@ -206,12 +205,19 @@ async function openDeck(deckId) {
   }
 }
 
-// Authenticate and populate the deck collection when the dashboard mounts.
-onMounted(() => {
-  if (userId.value) {
-    refreshDecks()
-  }
-})
+// Reload the collection whenever the authenticated user changes.
+watch(
+  userId,
+  (uid) => {
+    if (uid) {
+      refreshDecks()
+    } else {
+      savedDecks.value = []
+      loading.value = false
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -225,15 +231,27 @@ onMounted(() => {
       </div>
 
       <v-alert
-        v-if="authError"
+        v-if="loadError"
         type="error"
         variant="tonal"
+        class="mb-4"
       >
-        {{ authError }}
+        {{ loadError }}
       </v-alert>
 
-      <div v-else-if="!userId" class="loading-state">
-        Logging in...
+      <div v-else-if="!authReady" class="loading-state">
+        Checking your account...
+      </div>
+
+      <div v-else-if="!userId" class="empty-state">
+        <p>Log in to view and manage your decks.</p>
+        <v-btn color="primary" to="/login">
+          Log in
+        </v-btn>
+      </div>
+
+      <div v-else-if="loading" class="loading-state">
+        Loading your decks...
       </div>
 
       <div v-else-if="savedDecks.length" class="deck-grid">
@@ -276,7 +294,7 @@ onMounted(() => {
             </div>
 
             <!-- Edit and delete buttons -->
-            <div class="deck-card__actions">
+            <div v-if="userId" class="deck-card__actions">
 
               <v-btn
                 icon="mdi-pencil-outline"
@@ -311,6 +329,7 @@ onMounted(() => {
 
     <!-- Edit deck dialog -->
     <v-dialog
+      v-if="userId"
       v-model="editDialog"
       max-width="450"
     >
@@ -370,66 +389,6 @@ onMounted(() => {
       </v-card>
     </v-dialog>
 
-    <!-- Create deck dialog -->
-    <v-dialog
-      v-model="createDialog"
-      max-width="450"
-    >
-      <v-card class="edit-dialog">
-
-        <v-card-title>
-          Create New Deck
-        </v-card-title>
-
-        <v-card-text>
-          <v-form @submit.prevent="createNewDeck">
-
-            <v-text-field
-              v-model="deckName"
-              label="Deck name"
-              placeholder="e.g. Mono Red Aggro"
-              required
-            />
-
-            <v-select
-              v-model="deckFormat"
-              :items="formats"
-              label="Format"
-            />
-
-            <v-alert
-              v-if="deckSaveError"
-              type="error"
-              variant="tonal"
-              class="mb-4"
-            >
-              {{ deckSaveError }}
-            </v-alert>
-
-            <div class="edit-dialog__actions">
-
-              <v-btn
-                variant="text"
-                @click="closeCreateDialog"
-              >
-                Cancel
-              </v-btn>
-
-              <v-btn
-                color="primary"
-                type="submit"
-                :disabled="!deckName.trim()"
-              >
-                Create Deck
-              </v-btn>
-
-            </div>
-
-          </v-form>
-        </v-card-text>
-
-      </v-card>
-    </v-dialog>
 
   </main>
 </template>
