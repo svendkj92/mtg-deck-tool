@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   loadDecks,
   deleteDeck,
@@ -8,14 +8,17 @@ import {
   getCardArtCrop
 } from '../services/deckService'
 import { useRouter } from 'vue-router'
-import { getCurrentUser } from '../services/authService'
+import { useAuth } from '../composables/useAuth'
 
 // Router and collection state used by the dashboard.
 const router = useRouter()
 
-const userId = ref('')
+const { currentUser } = useAuth()
+
+const userId = computed(() => currentUser.value?.uid || '')
 const savedDecks = ref([])
-const authError = ref('')
+const loading = ref(false)
+const loadError = ref('')
 
 const formats = [
   'Standard',
@@ -66,8 +69,23 @@ async function addDeckCovers(decks) {
 
 // Loads decks from Firebase and adds artwork.
 async function refreshDecks() {
-  const decks = await loadDecks(userId.value)
-  savedDecks.value = await addDeckCovers(decks)
+  if (!userId.value) {
+    savedDecks.value = []
+    return
+  }
+
+  loading.value = true
+  loadError.value = ''
+
+  try {
+    const decks = await loadDecks(userId.value)
+    savedDecks.value = await addDeckCovers(decks)
+  } catch (error) {
+    console.error('Could not load decks:', error)
+    loadError.value = 'Could not load your decks.'
+  } finally {
+    loading.value = false
+  }
 }
 
 // Opens the edit dialog with the selected deck's details.
@@ -127,22 +145,6 @@ async function saveDeckChanges() {
     editError.value = error.message || 'Could not update deck.'
   } finally {
     savingEdit.value = false
-  }
-}
-
-// Authentication and initial collection loading.
-// Signs the user in and loads the decks.
-async function loginAnonymously() {
-  authError.value = ''
-
-  try {
-    const user = await getCurrentUser()
-    userId.value = user.uid
-
-    await refreshDecks()
-  } catch (error) {
-    console.error('Login failed:', error)
-    authError.value = error.message
   }
 }
 
@@ -206,7 +208,9 @@ async function openDeck(deckId) {
 
 // Authenticate and populate the deck collection when the dashboard mounts.
 onMounted(() => {
-  loginAnonymously()
+  if (userId.value) {
+    refreshDecks()
+  }
 })
 </script>
 

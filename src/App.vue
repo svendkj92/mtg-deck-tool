@@ -1,29 +1,29 @@
+
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { observeAuthState } from './services/authService'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from './composables/useAuth'
+import { logoutUser } from './services/authService'
 import CreateDeckDialog from './components/CreateDeckDialog.vue'
 
-// The drawer is controlled on smaller screens and remains visible on desktop.
+// Router
+const router = useRouter()
+
+// The drawer is controlled on smaller screens.
 const drawer = ref(null)
 
-// Authentication state
-const currentUser = ref(null)
-const authReady = ref(false)
+// Shared authentication state
+const { currentUser, authReady } = useAuth()
 
-let unsubscribeAuth = null
-
-// Listen for authentication changes when the app starts.
-onMounted(() => {
-  unsubscribeAuth = observeAuthState((user) => {
-    currentUser.value = user
-    authReady.value = true
-  })
-})
-
-// Stop listening when the app is unmounted.
-onBeforeUnmount(() => {
-  unsubscribeAuth?.()
-})
+// Log out the current user.
+async function handleLogout() {
+  try {
+    await logoutUser()
+    await router.push('/login')
+  } catch (error) {
+    console.error('Logout failed:', error)
+  }
+}
 </script>
 
 <template>
@@ -38,6 +38,38 @@ onBeforeUnmount(() => {
       <v-app-bar-title>
         MTG Deck Tool
       </v-app-bar-title>
+
+      <v-spacer />
+
+      <template v-if="authReady">
+        <template v-if="currentUser">
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-logout"
+            @click="handleLogout"
+          >
+            Log out
+          </v-btn>
+        </template>
+
+        <template v-else>
+          <v-btn
+            variant="text"
+            to="/login"
+          >
+            Log in
+          </v-btn>
+
+          <v-btn
+            color="primary"
+            variant="flat"
+            to="/register"
+            class="mr-2"
+          >
+            Register
+          </v-btn>
+        </template>
+      </template>
     </v-app-bar>
 
     <v-navigation-drawer
@@ -57,7 +89,7 @@ onBeforeUnmount(() => {
 
         <v-divider class="my-2" />
 
-        <CreateDeckDialog />
+        <CreateDeckDialog v-if="currentUser" />
       </v-list>
     </v-navigation-drawer>
 
