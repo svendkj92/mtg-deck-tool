@@ -1,9 +1,29 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { observeAuthState } from './services/authService'
 import CreateDeckDialog from './components/CreateDeckDialog.vue'
 
 // The drawer is controlled on smaller screens and remains visible on desktop.
 const drawer = ref(null)
+
+// Authentication state
+const currentUser = ref(null)
+const authReady = ref(false)
+
+let unsubscribeAuth = null
+
+// Listen for authentication changes when the app starts.
+onMounted(() => {
+  unsubscribeAuth = observeAuthState((user) => {
+    currentUser.value = user
+    authReady.value = true
+  })
+})
+
+// Stop listening when the app is unmounted.
+onBeforeUnmount(() => {
+  unsubscribeAuth?.()
+})
 </script>
 
 <template>

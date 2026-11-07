@@ -1,13 +1,46 @@
-import { signInAnonymously } from 'firebase/auth'
+
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth'
+
 import { auth } from './firebase'
 
-// Return the existing Firebase user when available; otherwise start anonymous sign-in.
-// Callers receive the Firebase User object and can use its UID for database paths.
-export async function getCurrentUser() {
-  if (auth.currentUser) {
-    return auth.currentUser
-  }
+// Register a new user
+export async function registerUser(email, password) {
+  const result = await createUserWithEmailAndPassword(
+    auth,
+    email,
+    password
+  )
 
-  const result = await signInAnonymously(auth)
   return result.user
+}
+
+// Log in an existing user
+export async function loginUser(email, password) {
+  const result = await signInWithEmailAndPassword(
+    auth,
+    email,
+    password
+  )
+
+  return result.user
+}
+
+// Log out the current user
+export async function logoutUser() {
+  await signOut(auth)
+}
+
+// Get the currently logged-in user
+export function getCurrentUser() {
+  return auth.currentUser
+}
+
+// Listen for changes to the authentication state
+export function observeAuthState(callback) {
+  return onAuthStateChanged(auth, callback)
 }
