@@ -795,6 +795,19 @@ watch(
                       </template>
 
                       <v-list density="compact">
+                        <!-- Quantity actions are available in the menu on mobile. -->
+                        <v-list-item
+                          class="quantity-menu-item"
+                          title="Add one copy"
+                          prepend-icon="mdi-plus"
+                          @click="changeQuantity(card, 1, group.targetBoard)"
+                        />
+                        <v-list-item
+                          class="quantity-menu-item"
+                          title="Remove one copy"
+                          prepend-icon="mdi-minus"
+                          @click="changeQuantity(card, -1, group.targetBoard)"
+                        />
                         <v-list-item
                           title="Remove card"
                           prepend-icon="mdi-delete-outline"
@@ -1013,7 +1026,7 @@ $radius: 12px;
 
 .deck-group {
   flex: 0 1 auto;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   min-width: 0;
 }
@@ -1047,12 +1060,14 @@ $radius: 12px;
 .deck-grid {
   display: flex;
   flex-wrap: wrap;
+  width: 100%;
   gap: 0.65rem;
 }
 
+// Two cards fill each row on small screens, including the space after card two.
 .deck-item {
-  width: clamp(100px, 27vw, 148px);
-  flex: 0 0 auto;
+  width: calc((100% - 0.65rem) / 2);
+  flex: 0 0 calc((100% - 0.65rem) / 2);
 }
 
 .deck-card {
@@ -1174,6 +1189,15 @@ $radius: 12px;
   transition: opacity 0.15s ease;
 }
 
+// On mobile, quantity changes are accessed through the ellipsis menu.
+.quantity-controls--overlay {
+  display: none;
+}
+
+.quantity-menu-item {
+  display: list-item;
+}
+
 .quantity-button {
   width: 30px !important;
   height: 30px !important;
@@ -1197,6 +1221,23 @@ $radius: 12px;
 
 // Larger screens progressively add space and increase card size.
 @media (min-width: 600px) {
+  .deck-group {
+    width: fit-content;
+  }
+
+  .deck-item {
+    width: clamp(120px, 19vw, 165px);
+    flex: 0 0 auto;
+  }
+
+  .quantity-controls--overlay {
+    display: flex;
+  }
+
+  .quantity-menu-item {
+    display: none;
+  }
+
   .deck-banner {
     min-height: 270px;
     padding: 2rem;
