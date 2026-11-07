@@ -32,14 +32,13 @@ const router = createRouter({
   ],
 })
 
-// Handle routes that should only be available to logged-out users.
+// Keep authenticated users away from the login and registration pages.
 router.beforeEach(async (to) => {
   const user = await waitForAuth()
 
-    // Only redirect users with a registered account.
-    if (to.meta.guestOnly && user && !user.isAnonymous) {
-      return { name: 'home' }
-    }
+  if (to.meta.guestOnly && user) {
+    return { name: 'home' }
+  }
 })
 
 export default router
